@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root { --ink: #071016; --panel: #101b24; --line: #253744; --muted: #8293a0; --text: #e6edf2; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.technical-grid { background-image: linear-gradient(rgba(70, 96, 111, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(70, 96, 111, .08) 1px, transparent 1px); background-size: 24px 24px; }
+.scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #304451; border-radius: 4px; }
