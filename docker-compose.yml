@@ -7,3 +7,15 @@ services:
       - "8081:8080"
     volumes:
       - ./src/ingest-service:/app
+
+  device-simulator:
+    build:
+      context: .
+      dockerfile: infra/dev/device-simulator.Dockerfile
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./src/device-simulator:/app
+
+    
+    
