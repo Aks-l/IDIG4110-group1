@@ -1,0 +1,9 @@
+services:
+  ingest-service:
+    build:
+      context: .
+      dockerfile: infra/dev/ingest-service.Dockerfile
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./src/ingest-service:/app
