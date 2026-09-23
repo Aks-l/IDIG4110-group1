@@ -1,4 +1,15 @@
 services:
+  database:
+    image: postgres:18
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql
+
   ingest-service:
     build:
       context: .
@@ -17,5 +28,5 @@ services:
     volumes:
       - ./src/device-simulator:/app
 
-    
-    
+volumes:
+  postgres_data_dev:
