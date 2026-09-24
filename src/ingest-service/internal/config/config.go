@@ -22,11 +22,11 @@ type DatabaseConfig struct {
 }
 
 type ServerConfig struct {
-	Port           string `yaml:"port"`
-	ReadTimeout    int    `yaml:"readTimeout"`
-	WriteTimout    int    `yaml:"writeTimout"`
-	IdleTimeout    int    `yaml:"idleTimout"`
-	MaxHeaderBytes int    `yaml:"maxHeaderBytes"`
+	Port           int `yaml:"port"`
+	ReadTimeout    int `yaml:"readTimeout"`
+	WriteTimout    int `yaml:"writeTimout"`
+	IdleTimeout    int `yaml:"idleTimout"`
+	MaxHeaderBytes int `yaml:"maxHeaderBytes"`
 }
 
 func Load(configPath string) (*Config, error) {
@@ -39,5 +39,5 @@ func Load(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("parsing yaml file: %w", err)
 	}
 
-	return nil, nil
+	return &cfg, nil
 }

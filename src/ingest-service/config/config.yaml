@@ -1,12 +1,12 @@
 server:
-  port: "8080"
+  port: 8080
   readTimout: 10
   writeTimout: 10
   idleTimout: 30
   maxHeaderBytes: 1048576
 
 database:
-  host: "db"
+  host: "database"
   port: 5432
   user: "postgres"
   name: "postgres"

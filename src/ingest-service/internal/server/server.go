@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"IDIG4110/ingest-service/internal/config"
+	"IDIG4110/ingest-service/internal/db"
 )
 
 func Run() error {
@@ -20,10 +22,16 @@ func Run() error {
 		return err
 	}
 
+	db, err := db.Init(cfg.Database)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
 	router := NewRouter()
 
 	httpServer := http.Server{
-		Addr:           cfg.Server.Port,
+		Addr:           ":" + strconv.Itoa(cfg.Server.Port),
 		Handler:        router,
 		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:   time.Duration(cfg.Server.WriteTimout) * time.Second,
