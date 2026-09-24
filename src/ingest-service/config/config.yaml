@@ -12,3 +12,14 @@ database:
   name: "postgres"
   password: "postgres"
   ssl: "disable"
+
+mqtt:
+  url: "tcp://mosquitto:1883"
+  clientId: "1234"
+  autoConnect: true
+  connectRetry: true
+  connectRetryInterval: 5
+  keepAlive: 30
+  pingTimeOut: 10
+  CleanSession: false
+  

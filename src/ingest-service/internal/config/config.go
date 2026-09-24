@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
+	Mqtt     MqttConfig     `yaml:"mqtt"`
 }
 
 type DatabaseConfig struct {
@@ -27,6 +28,17 @@ type ServerConfig struct {
 	WriteTimout    int `yaml:"writeTimout"`
 	IdleTimeout    int `yaml:"idleTimout"`
 	MaxHeaderBytes int `yaml:"maxHeaderBytes"`
+}
+
+type MqttConfig struct {
+	Url                  string `yaml:"url"`
+	ClientId             string `yaml:"clientId"`
+	AutoConnect          bool   `yaml:"autoConnect"`
+	ConnectRetry         bool   `yaml:"connectRetry"`
+	ConnectRetryInterval int    `yaml:"connectRetryInterval"`
+	KeepAlive            int    `yaml:"keepAlive"`
+	PingTimeout          int    `yaml:"pingTimeout"`
+	CleanSession         bool   `yaml:"cleanSession"`
 }
 
 func Load(configPath string) (*Config, error) {
