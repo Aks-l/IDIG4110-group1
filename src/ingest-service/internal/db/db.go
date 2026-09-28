@@ -13,14 +13,15 @@ import (
 )
 
 type Database struct {
-	conn *pgx.Conn
+	Conn *pgx.Conn
+	Url string
 }
 
 func Init(cfg config.DatabaseConfig) (Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.User, cfg.Password, cfg.Host, strconv.Itoa(cfg.Port), cfg.Name)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.User, cfg.Password, cfg.Host, strconv.Itoa(cfg.Port), cfg.Name, cfg.SSL)
 
 	conn, err := pgx.Connect(ctx, url)
 	if err != nil {
@@ -34,7 +35,8 @@ func Init(cfg config.DatabaseConfig) (Database, error) {
 	slog.Info("Successfully connected to database")
 
 	return Database{
-		conn: conn,
+		Conn: conn,
+		Url:  url,
 	}, nil
 }
 
@@ -42,5 +44,5 @@ func (d *Database) Close() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	d.conn.Close(ctx)
+	d.Conn.Close(ctx)
 }

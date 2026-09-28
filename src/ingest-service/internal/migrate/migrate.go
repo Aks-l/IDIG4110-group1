@@ -5,6 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 type Migrator struct {
@@ -13,11 +15,11 @@ type Migrator struct {
 
 func Init(url string) (*Migrator, error) {
 	m, err := migrate.New(
-		"file:///migrations",
+		"file://migrations",
 		url,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initilze migrator: %w", err) 
 	}
 	slog.Info("Initilizing database migrator")
 
@@ -27,9 +29,9 @@ func Init(url string) (*Migrator, error) {
 }
 
 func (m *Migrator) CheckMigrationStatus() error {
-	version, dirty, error := m.Migrate.Version()
-	if error != nil {
-		return error
+	version, dirty, err := m.Migrate.Version()
+	if err != nil {
+		return err
 	}
 	if dirty {
 		return fmt.Errorf("database in dirty state at version: %d", version)

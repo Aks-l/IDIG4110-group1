@@ -14,6 +14,7 @@ import (
 
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
+	"IDIG4110/ingest-service/internal/migrate"
 )
 
 func Run() error {
@@ -27,6 +28,14 @@ func Run() error {
 		return err
 	}
 	defer db.Close()
+	_, err = migrate.Init(db.Url)
+	if err != nil {
+		return err
+	}
+
+//	if err := m.CheckMigrationStatus(); err != nil {
+//		return err
+//	}
 
 	router := NewRouter()
 
