@@ -28,14 +28,15 @@ func Run() error {
 		return err
 	}
 	defer db.Close()
-	_, err = migrate.Init(db.Url)
+	m, err := migrate.Init(db.Url)
 	if err != nil {
 		return err
 	}
+	m.Migrate.Up()
 
-//	if err := m.CheckMigrationStatus(); err != nil {
-//		return err
-//	}
+	if err := m.CheckMigrationStatus(); err != nil {
+		return err
+	}
 
 	router := NewRouter()
 

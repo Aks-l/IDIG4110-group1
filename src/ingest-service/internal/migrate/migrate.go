@@ -31,10 +31,10 @@ func Init(url string) (*Migrator, error) {
 func (m *Migrator) CheckMigrationStatus() error {
 	version, dirty, err := m.Migrate.Version()
 	if err != nil {
-		return err
+		return fmt.Errorf("check migration status: %w", err)
 	}
 	if dirty {
-		return fmt.Errorf("database in dirty state at version: %d", version)
+		return fmt.Errorf("check migration status: database in dirty state at version: %d", version)
 	}
 
 	slog.Info("Database schema", "version", version)
