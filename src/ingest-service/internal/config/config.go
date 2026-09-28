@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Mqtt     MqttConfig     `yaml:"mqtt"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Mqtt      MqttConfig      `yaml:"mqtt"`
+	Migration MigrationConfig `yaml:"migration"`
 }
 
 type DatabaseConfig struct {
@@ -39,6 +40,10 @@ type MqttConfig struct {
 	KeepAlive            int    `yaml:"keepAlive"`
 	PingTimeout          int    `yaml:"pingTimeout"`
 	CleanSession         bool   `yaml:"cleanSession"`
+}
+
+type MigrationConfig struct {
+	Directory string `yaml:"directory"`
 }
 
 func Load(configPath string) (*Config, error) {

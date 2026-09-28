@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"IDIG4110/ingest-service/internal/config"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -13,13 +15,13 @@ type Migrator struct {
 	Migrate *migrate.Migrate
 }
 
-func Init(url string) (*Migrator, error) {
+func Init(cfg config.MigrationConfig, url string) (*Migrator, error) {
 	m, err := migrate.New(
-		"file://migrations",
+		fmt.Sprintf("file://%s", cfg.Directory),
 		url,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initilze migrator: %w", err) 
+		return nil, fmt.Errorf("failed to initilze migrator: %w", err)
 	}
 	slog.Info("Initilizing database migrator")
 

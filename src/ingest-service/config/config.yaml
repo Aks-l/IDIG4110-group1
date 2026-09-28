@@ -22,4 +22,7 @@ mqtt:
   keepAlive: 30
   pingTimeOut: 10
   CleanSession: false
+
+migration:
+  directory: "migrations"
   

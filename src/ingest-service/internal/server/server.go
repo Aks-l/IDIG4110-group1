@@ -28,7 +28,7 @@ func Run() error {
 		return err
 	}
 	defer db.Close()
-	m, err := migrate.Init(db.Url)
+	m, err := migrate.Init(cfg.Migration, db.Url)
 	if err != nil {
 		return err
 	}
