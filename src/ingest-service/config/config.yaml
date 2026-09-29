@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  readTimout: 10
+  writeTimout: 10
+  idleTimout: 30
+  maxHeaderBytes: 1048576
+
+database:
+  host: "database"
+  port: 5432
+  user: "postgres"
+  name: "postgres"
+  password: "postgres"
+  ssl: "disable"
+
+mqtt:
+  url: "tcp://mosquitto:1883"
+  clientId: "1234"
+  autoConnect: true
+  connectRetry: true
+  connectRetryInterval: 5
+  keepAlive: 30
+  pingTimeOut: 10
+  CleanSession: false
+
+migration:
+  directory: "migrations"
+  

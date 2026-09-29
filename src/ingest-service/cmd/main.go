@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"log/slog"
 
-func main()  {
-	fmt.Println("hello world")
+	"IDIG4110/ingest-service/internal/server"
+)
+
+func main() {
+	if err := server.Run(); err != nil {
+		slog.Error("Starting server", "error", err)
+	}
 }
