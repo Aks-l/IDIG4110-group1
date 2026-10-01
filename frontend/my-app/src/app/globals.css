@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f6f3;
+  --foreground: #17221d;
+  --surface: #ffffff;
+  --surface-muted: #eef3ef;
+  --line: #dbe4dc;
+  --muted: #68766d;
+  --brand: #1f6f5b;
+  --brand-dark: #145442;
+  --accent: #e5a93d;
+}
+@theme {
+  --color-brand: #1f6f5b;
+  --color-brand-hover: #145442;
 }
 
 @theme inline {
@@ -12,15 +23,59 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: #b9d8c7;
+  color: #123b2f;
+}
+
+button,
+select,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid #9bcdb5;
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8d5cb;
+  border: 3px solid var(--background);
+  border-radius: 999px;
+}
+
+.dashboard-main {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(190, 218, 198, 0.34), transparent 30rem),
+    var(--background);
+}
+
+.page-heading {
+  letter-spacing: -0.03em;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 30px rgba(35, 64, 48, 0.06);
+}
+
+.soft-divider {
+  border-color: var(--line);
 }

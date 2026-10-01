@@ -8,6 +8,16 @@ export type Automation = {
   runCount: number;
 };
 
+export type AutomationDraft = {
+  name: string;
+  description: string;
+  category: Automation['category'];
+  triggerType: string;
+  triggerDetail: string;
+  actionCommand: string;
+  actionTarget: string;
+};
+
 export type RoomMetric = {
   value: number;
   change: number;

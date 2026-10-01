@@ -13,7 +13,7 @@ export function Toggle({ checked, onChange, label }: ToggleProps) {
       aria-label={label ?? (checked ? 'Disable' : 'Enable')}
       aria-pressed={checked}
       className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-        checked ? 'bg-green-500' : 'bg-gray-300'
+        checked ? 'bg-[#1f6f5b]' : 'bg-[#cbd6ce]'
       }`}
     >
       <span

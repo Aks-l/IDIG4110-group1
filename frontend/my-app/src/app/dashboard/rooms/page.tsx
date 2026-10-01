@@ -49,7 +49,7 @@ export default function RoomsPage() {
   if (!data) return <p>Loading room data...</p>;
 
   const deviceList = (
-    <section className="rounded-lg border bg-white p-4 shadow-sm">
+    <section className="panel p-4">
       <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
         Devices
       </h2>
@@ -57,7 +57,7 @@ export default function RoomsPage() {
         {data.devices.map((d) => (
           <li
             key={d.id}
-            className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
+            className="flex items-center justify-between rounded-xl bg-[#f1f5f1] px-4 py-3"
           >
             <div className="flex flex-col">
               <span className="font-medium">{d.name}</span>
@@ -77,7 +77,7 @@ export default function RoomsPage() {
   );
 
   const activityList = (
-    <section className="rounded-lg border bg-white p-4 shadow-sm">
+    <section className="panel p-4">
       <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
         Recent Activity
       </h2>
@@ -85,7 +85,7 @@ export default function RoomsPage() {
         {data.activity.map((a) => (
           <li
             key={a.id}
-            className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
+            className="flex items-center justify-between rounded-xl bg-[#f1f5f1] px-4 py-3"
           >
             <span className="text-sm">{a.description}</span>
             <span className="text-xs text-gray-500">{formatTime(a.timestamp)}</span>
@@ -114,7 +114,7 @@ export default function RoomsPage() {
         </select>
       </div>
 
-      <hr className="border-gray-200" />
+      <hr className="soft-divider" />
 
       {view === 'Room Overview' && (
         <>
@@ -141,7 +141,7 @@ export default function RoomsPage() {
             />
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="soft-divider" />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {deviceList}

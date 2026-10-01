@@ -60,11 +60,11 @@ export default function EventsPage() {
   if (error) return <p className="text-red-600">{error}</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header + sort controls */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Events</h1>
+          <h1 className="page-heading text-3xl font-bold text-[#17221d]">Events</h1>
           <p className="text-sm text-gray-500">{events.length} recent events</p>
         </div>
 
@@ -82,7 +82,7 @@ export default function EventsPage() {
 
           <button
             onClick={() => setAscending((v) => !v)}
-            className="rounded-md border bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+            className="rounded-xl border border-[#dbe4dc] bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-[#f1f5f1]"
           >
             {ascending ? '↑ Asc' : '↓ Desc'}
           </button>
@@ -96,7 +96,7 @@ export default function EventsPage() {
           return (
             <li
               key={e.id}
-              className="flex items-center gap-4 rounded-lg border bg-white px-5 py-4 shadow-sm"
+              className="panel flex items-center gap-4 px-5 py-4"
             >
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
 
