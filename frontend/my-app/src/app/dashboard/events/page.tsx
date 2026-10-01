@@ -1,18 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { loadEvents } from '@/lib/api/events.data';
 import type { Event, Severity } from '@/lib/api/types';
 
 type SortKey = 'timestamp' | 'location' | 'severity';
-
-const events: Event[] = [
-  { id: '1', timestamp: '2026-09-15T14:32:00', title: 'Front door opened',           location: 'Entrance',    severity: 'info'     },
-  { id: '2', timestamp: '2026-09-15T14:20:00', title: 'Bedroom window closed',       location: 'Bedroom',     severity: 'info'     },
-  { id: '3', timestamp: '2026-09-15T13:58:00', title: 'Oven door seal broken',       location: 'Kitchen',     severity: 'critical' },
-  { id: '4', timestamp: '2026-09-15T13:41:00', title: 'Motion detected',             location: 'Hallway',     severity: 'info'     },
-  { id: '5', timestamp: '2026-09-15T13:12:00', title: 'Smoke level rising',          location: 'Kitchen',     severity: 'warning'  },
-  { id: '6', timestamp: '2026-09-15T12:55:00', title: 'Living room light turned on', location: 'Living Room', severity: 'info'     },
-];
 
 const severityStyles: Record<Severity, { dot: string; badge: string; label: string }> = {
   info:     { dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700',     label: 'Info'     },
@@ -38,6 +30,14 @@ function formatDate(iso: string) {
 export default function EventsPage() {
   const [sortBy, setSortBy] = useState<SortKey>('timestamp');
   const [ascending, setAscending] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadEvents()
+      .then(setEvents)
+      .catch(() => setError('Unable to load events'));
+  }, []);
 
   const sorted = useMemo(() => {
     const copy = [...events];
@@ -55,7 +55,9 @@ export default function EventsPage() {
     });
 
     return copy;
-  }, [sortBy, ascending]);
+  }, [events, sortBy, ascending]);
+
+  if (error) return <p className="text-red-600">{error}</p>;
 
   return (
     <div className="space-y-6">

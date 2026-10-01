@@ -1,68 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
 import { Toggle } from '@/components/Toggle';
+import { loadAutomations } from '@/lib/api/automations.data';
 import type { Automation } from '@/lib/api/types';
-
-// HARDCODED DATA
-
-const initialAutomations: Automation[] = [
-  {
-    id: '1',
-    name: 'Hallway motion light',
-    description: 'Motion in Hallway: turn on Hallway Light at 40%',
-    category: 'Comfort',
-    enabled: true,
-    lastRun: '2026-09-15T14:30:00',
-    runCount: 128,
-  },
-  {
-    id: '2',
-    name: 'Good Morning',
-    description: '07:00 weekdays: lights on, thermostat 22°C',
-    category: 'Comfort',
-    enabled: true,
-    lastRun: '2026-09-15T07:00:00',
-    runCount: 62,
-  },
-  {
-    id: '3',
-    name: 'Away Mode',
-    description: 'Nobody home: lock doors, cameras on, lights off',
-    category: 'Security',
-    enabled: false,
-    lastRun: '2026-09-14T18:12:00',
-    runCount: 12,
-  },
-  {
-    id: '4',
-    name: 'Energy saver',
-    description: 'No motion for 30 min: turn off all lights',
-    category: 'Energy',
-    enabled: true,
-    lastRun: '2026-09-15T13:45:00',
-    runCount: 47,
-  },
-  {
-    id: '5',
-    name: 'Faucet leak alert',
-    description: 'Faucet running for 10 min: send notification',
-    category: 'Notification',
-    enabled: true,
-    lastRun: '2026-09-12T11:22:00',
-    runCount: 23,
-  },
-    {
-    id: '6',
-    name: 'Window open alert',
-    description: 'Any window opens while away -> send notification',
-    category: 'Notification',
-    enabled: true,
-    lastRun: '2026-09-15T11:22:00',
-    runCount: 5,
-  },
-];
 
 // --- Helper ---
 
@@ -85,7 +27,14 @@ const categoryStyles: Record<Automation['category'], string> = {
 // --- Page ---
 
 export default function AutomationsPage() {
-  const [automations, setAutomations] = useState(initialAutomations);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAutomations()
+      .then(setAutomations)
+      .catch(() => setError('Unable to load automations'));
+  }, []);
 
   const toggle = (id: string) =>
     setAutomations((list) =>
@@ -99,6 +48,8 @@ export default function AutomationsPage() {
   const todayRuns = automations.filter(
     (a) => a.lastRun && new Date(a.lastRun).toDateString() === new Date().toDateString()
   ).length;
+
+  if (error) return <p className="text-red-600">{error}</p>;
 
   return (
     <div className="space-y-6">

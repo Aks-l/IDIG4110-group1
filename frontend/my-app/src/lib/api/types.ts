@@ -8,10 +8,16 @@ export type Automation = {
   runCount: number;
 };
 
-export type Stat = {
-  label: string;
-  value: string;
-  change: string;
+export type RoomMetric = {
+  value: number;
+  change: number;
+};
+
+export type RoomMetrics = {
+  temperature: RoomMetric;
+  humidity: RoomMetric;
+  co2: RoomMetric;
+  occupancy: RoomMetric;
 };
 
 export type Device = {
@@ -28,7 +34,9 @@ export type Activity = {
 };
 
 export type RoomData = {
-  stats: Stat[];
+  id: string;
+  name: string;
+  metrics: RoomMetrics;
   devices: Device[];
   activity: Activity[];
 };
