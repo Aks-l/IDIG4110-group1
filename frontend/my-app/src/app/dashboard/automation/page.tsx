@@ -3,18 +3,7 @@
 import { useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
 import { Toggle } from '@/components/Toggle';
-
-// --- Types ---
-
-type Automation = {
-  id: string;
-  name: string;
-  description: string;         
-  category: 'Comfort' | 'Security' | 'Energy' | 'Notification';
-  enabled: boolean;
-  lastRun?: string;           
-  runCount: number;
-};
+import type { Automation } from '@/lib/api/types';
 
 // HARDCODED DATA
 

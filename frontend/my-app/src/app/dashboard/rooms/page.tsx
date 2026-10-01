@@ -1,20 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { SubNav } from '@/components/SubNav';
+import { RoomView, SubNav } from '@/components/SubNav';
 import { InfoBox } from '@/components/InfoBox';
-
-// --- Types ---
-
-type Stat = { label: string; value: string; change: string };
-type Device = { id: string; name: string; type: string; on: boolean };
-type Activity = { id: string; timestamp: string; description: string };
-
-type RoomData = {
-  stats: Stat[];
-  devices: Device[];
-  activity: Activity[];
-};
+import type { RoomData } from '@/lib/api/types';
 
 // TEMPORARY HARDCODED DATA
 
@@ -113,13 +102,61 @@ function formatTime(iso: string) {
 
 export default function RoomsPage() {
   const [currentRoom, setCurrentRoom] = useState<Room>('Living Room');
+  const [view, setView] = useState<RoomView>('Room Overview');
   const data = ROOM_DATA[currentRoom];
+
+  const deviceList = (
+    <section className="rounded-lg border bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
+        Devices
+      </h2>
+      <ul className="space-y-2">
+        {data.devices.map((d) => (
+          <li
+            key={d.id}
+            className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">{d.name}</span>
+              <span className="text-xs text-gray-500">{d.type}</span>
+            </div>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                d.on ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {d.on ? 'On' : 'Off'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+
+  const activityList = (
+    <section className="rounded-lg border bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
+        Recent Activity
+      </h2>
+      <ul className="space-y-2">
+        {data.activity.map((a) => (
+          <li
+            key={a.id}
+            className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
+          >
+            <span className="text-sm">{a.description}</span>
+            <span className="text-xs text-gray-500">{formatTime(a.timestamp)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 
   return (
     <div className="space-y-6">
       {/* Top bar */}
       <div className="flex items-center justify-between">
-        <SubNav />
+        <SubNav view={view} onViewChange={setView} />
 
         <select
           value={currentRoom}
@@ -136,62 +173,25 @@ export default function RoomsPage() {
 
       <hr className="border-gray-200" />
 
-      {/* Info boxes */}
-      <div className="grid grid-cols-4 gap-3">
-        {data.stats.map((s) => (
-          <InfoBox key={s.label} label={s.label} value={s.value} change={s.change} />
-        ))}
-      </div>
-
-      <hr className="border-gray-200" />
-
-      {/* Two-column bottom section */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Devices */}
-        <section className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
-            Devices
-          </h2>
-          <ul className="space-y-2">
-            {data.devices.map((d) => (
-              <li
-                key={d.id}
-                className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium">{d.name}</span>
-                  <span className="text-xs text-gray-500">{d.type}</span>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    d.on ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {d.on ? 'On' : 'Off'}
-                </span>
-              </li>
+      {view === 'Room Overview' && (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {data.stats.map((s) => (
+              <InfoBox key={s.label} label={s.label} value={s.value} change={s.change} />
             ))}
-          </ul>
-        </section>
+          </div>
 
-        {/* Recent activity */}
-        <section className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
-            Recent Activity
-          </h2>
-          <ul className="space-y-2">
-            {data.activity.map((a) => (
-              <li
-                key={a.id}
-                className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3"
-              >
-                <span className="text-sm">{a.description}</span>
-                <span className="text-xs text-gray-500">{formatTime(a.timestamp)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+          <hr className="border-gray-200" />
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {deviceList}
+            {activityList}
+          </div>
+        </>
+      )}
+
+      {view === 'Devices' && deviceList}
+      {view === 'History' && activityList}
     </div>
   );
 }

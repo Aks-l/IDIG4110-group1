@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+export type RoomView = 'Room Overview' | 'Devices' | 'History';
 
-const views = ['Room Overview', 'Devices', 'History', 'Settings'];
+const views: RoomView[] = ['Room Overview', 'Devices', 'History'];
 
-export function SubNav() {
-  const [view, setView] = useState('Room Overview');
+type SubNavProps = {
+  view: RoomView;
+  onViewChange: (view: RoomView) => void;
+};
 
+export function SubNav({ view, onViewChange }: SubNavProps) {
   return (
     <select
       value={view}
-      onChange={(e) => setView(e.target.value)}
+      onChange={(e) => onViewChange(e.target.value as RoomView)}
       className="rounded-md border bg-white px-3 py-1.5 text-sm"
     >
       {views.map((v) => (

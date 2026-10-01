@@ -1,16 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-
-type Severity = 'info' | 'warning' | 'critical';
-
-type Event = {
-  id: string;
-  timestamp: string;
-  title: string;
-  location: string;
-  severity: Severity;
-};
+import type { Event, Severity } from '@/lib/api/types';
 
 type SortKey = 'timestamp' | 'location' | 'severity';
 

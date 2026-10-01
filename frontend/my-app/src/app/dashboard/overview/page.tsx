@@ -4,7 +4,7 @@ type Stat = {
   value: string;
 };
 
-type Device = {
+type DeviceSummary = {
   connected: number;
   warning: number;
   events: number;
@@ -20,7 +20,7 @@ async function getStats(): Promise<Stat[]> {
   ];
 }
 
-async function getDevices(): Promise<Device> {
+async function getDevices(): Promise<DeviceSummary> {
   return {
     connected: 24,
     warning: 3,
