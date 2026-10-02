@@ -1,8 +1,8 @@
-# MQTT message envelope (read path)
+# Normalized reading model (read path)
 
-This document defines the normalized message format that the Device Integration Gateway publishes to MQTT after translating gateway-native data. Ingest-service consumes this shape and writes it to the `readings` hypertable. No service other than the gateway adapter ever sees a raw gateway payload.
+This document defines the internal normalized model for a single reading: a measurement or state change observed at a device, expressed in the system's own terms. Every reading in the platform takes this shape. It is what flows on MQTT, what ingest-service writes to the `readings` hypertable, and what downstream services consume. Gateway-specific payloads never leave the Device Integration Gateway; adapters translate native data into this model at the boundary.
 
-The envelope is gateway-agnostic by design. It is split into a **required core** that every gateway must be able to supply, and **extended data** that a gateway may or may not have. Fields outside the core are nullable, so a gateway that cannot supply them simply leaves them null. Extended data that has no dedicated column goes in `attributes`, unmodified, so nothing the gateway knows is silently dropped.
+The model is gateway-agnostic by design. It has a **core** that defines what a reading fundamentally is, and **extended data** that enriches a reading when available. Extended fields are nullable: a reading is still valid when they are absent. Extended data with no dedicated field is carried in `attributes`, unmodified, so nothing known about the reading is silently dropped.
 
 ## Topic
 
@@ -13,7 +13,7 @@ twin/{gateway_id}/readings
 - `gateway_id` is the UUID of the row in `gateways` for the source gateway.
 - One topic per gateway keeps routing and access control simple.
 
-## Envelope
+## Model
 
 ```json
 {
@@ -30,47 +30,47 @@ twin/{gateway_id}/readings
 }
 ```
 
-### Required core
+### Core
 
-Every gateway adapter must supply these. A message missing a core field is rejected by ingest.
+The core is the definition of a reading. A message missing a core field is not a reading and is rejected by ingest.
 
-| Field | Type | Maps to readings column | Notes |
+| Field | Type | Maps to readings column | Meaning |
 |---|---|---|---|
-| `gateway_id` | uuid | `gateway_id` | which gateway produced this reading |
-| `external_entity_id` | string | `external_entity_id` | the gateway-native identifier for the thing being read, verbatim |
-| `timestamp` | RFC 3339 | `time` | true event time at the gateway, never "now" |
-| `value_num` or `value_text` | number / string | `value_num` / `value_text` | exactly one must be non-null (see Value below) |
+| `gateway_id` | uuid | `gateway_id` | which source produced this reading |
+| `external_entity_id` | string | `external_entity_id` | identifier for the thing being read, verbatim from the source |
+| `timestamp` | RFC 3339 | `time` | when the event actually happened, never "now" |
+| `value_num` or `value_text` | number / string | `value_num` / `value_text` | the observed value; exactly one is non-null (see Value below) |
 
 ### Extended data (optional, nullable)
 
-A gateway supplies these only if it has them. Null means "this gateway did not provide it", not "no value".
+These enrich a reading when the information exists. Null means "not known for this reading", not "no value".
 
-| Field | Type | Maps to readings column | Notes |
+| Field | Type | Maps to readings column | Meaning |
 |---|---|---|---|
 | `value_num` | number | `value_num` | set when the reading is numeric |
 | `value_text` | string | `value_text` | set when the reading is a state, mode, or any non-numeric value |
-| `device_class` | string | `device_class` | what kind of quantity/state this is (temperature, motion, ...); null if the gateway has no such concept |
-| `unit` | string | `unit` | unit of measurement for numeric readings; null if none |
-| `attributes` | object | `attributes` | any extra gateway-specific data, preserved verbatim |
+| `device_class` | string | `device_class` | what kind of quantity/state this is (temperature, motion, ...) |
+| `unit` | string | `unit` | unit of measurement for numeric readings |
+| `attributes` | object | `attributes` | any extra source-specific detail, preserved verbatim |
 
-`recorded_at` is not in the envelope. Ingest stamps it at consumption time, so the gap between `timestamp` (event time at the gateway) and `recorded_at` (ingest time) measures delivery and buffering lag.
+`recorded_at` is not part of the model. Ingest stamps it at consumption time, so the gap between `timestamp` (event time at the source) and `recorded_at` (ingest time) measures delivery and buffering lag.
 
 ## Value
 
-A reading carries one value, expressed in one of two columns:
+A reading carries one value, expressed in one of two fields:
 
-- Numeric readings go in `value_num`, with `value_text` null. If the gateway supplies a unit, it goes in `unit`.
+- Numeric readings go in `value_num`, with `value_text` null. If a unit is known, it goes in `unit`.
 - Non-numeric readings (states, modes, on/off, open/closed) go in `value_text`, with `value_num` null.
 
-Exactly one of the two must be non-null. This is enforced by a check constraint on `readings`. Adapters must not invent a numeric value for a non-numeric state, and must not drop a reading just because it is non-numeric.
+Exactly one of the two is non-null, enforced by a check constraint on `readings`. A non-numeric state is never forced into a number, and a reading is never dropped just because it is non-numeric.
 
 ## Attributes
 
-`attributes` is the escape hatch that guarantees no information loss. Any gateway-native field that does not map to a dedicated column goes here, unmodified. Consumers that need gateway-specific detail read it from `attributes`; the dedicated columns are conveniences for the common query paths, not a ceiling on what is stored.
+`attributes` is what guarantees no information loss. Any source detail that has no dedicated field goes here, unmodified. Consumers that need source-specific detail read it from `attributes`; the dedicated fields are conveniences for the common query paths, not a ceiling on what is stored.
 
 ## Worked example: Home Assistant
 
-This is one concrete application of the rules above. Other gateways follow the same contract with their own translation.
+This is one concrete translation into the model. Each source has its own adapter; the model does not change.
 
 HA emits a `state_changed` WebSocket event with `data.new_state`. The adapter translates it like this:
 
@@ -80,7 +80,7 @@ HA emits a `state_changed` WebSocket event with `data.new_state`. The adapter tr
 - Sentinel states such as `unavailable`, `unknown`, and `none` must go to `value_text`, never parsed to a number or dropped. They carry meaning (device offline, no data yet) that the twin and rules need.
 - `unit` = `new_state.attributes.unit_of_measurement` when present, else null.
 - `device_class` = `new_state.attributes.device_class` when present, else null.
-- `attributes` = the full HA `attributes` object, unmodified.
+- `attributes` = the full HA `attributes` object, unmodified. In addition, the adapter injects `new_state.context.id` into `attributes.context_id`. HA puts `context` beside `attributes`, not inside it, so without this step the event id would be dropped. That id is what later lets us correlate a state change back to a command we issued.
 
 HA event (trimmed):
 
@@ -111,6 +111,6 @@ This produces the envelope example at the top: `state: "21.5"` becomes `value_nu
 - Retained messages: not used. State recovery comes from a fresh full-state sync at adapter startup, not from retained MQTT messages.
 - Ordering is not guaranteed across entities. Per-entity ordering is preserved well enough for a last-write-wins twin, but consumers keying on order must use `timestamp`, not arrival order.
 
-## Adding a gateway
+## Supporting a new source
 
-A new gateway adapter produces this same envelope; the contract is fixed, only the translation differs. When adding one, document which extended fields it can and cannot supply. Anything it cannot supply is left null; anything extra it knows goes in `attributes`. Do not shrink the core and do not drop gateway data to fit the columns.
+The normalized model is fixed; only the translation into it differs per source. An adapter maps native data onto the core fields, fills extended fields where the information exists, and puts everything else in `attributes`. When a source has no concept that matches an extended field, that field is left null. The core is never weakened to fit a source, and source data is never dropped to fit the fields.
