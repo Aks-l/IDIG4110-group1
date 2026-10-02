@@ -1,6 +1,7 @@
 package mqttclient
 
 import (
+	"log/slog"
 	"time"
 
 	"IDIG4110/ingest-service/internal/config"
@@ -14,7 +15,7 @@ type MqttClient struct {
 	client mqtt.Client
 }
 
-func Init(cfg config.MqttConfig) (*MqttClient, error) {
+func Init(cfg config.MqttConfig, msg mqtt.MessageHandler) (*MqttClient, error) {
 	opts := mqtt.NewClientOptions().
 		AddBroker(cfg.Url).
 		SetClientID(cfg.ClientId).
@@ -23,7 +24,16 @@ func Init(cfg config.MqttConfig) (*MqttClient, error) {
 		SetConnectRetryInterval(time.Duration(cfg.ConnectRetryInterval) * time.Second).
 		SetKeepAlive(time.Duration(cfg.KeepAlive) * time.Second).
 		SetPingTimeout(time.Duration(cfg.PingTimeout) * time.Second).
-		SetCleanSession(cfg.CleanSession)
+		SetCleanSession(cfg.CleanSession).
+		SetDefaultPublishHandler(msg)
+
+	opts.OnConnect = func(c mqtt.Client) {
+		slog.Info("MQTT Connected")
+	}
+	
+	opts.OnConnectionLost = func(c mqtt.Client, err error) {
+		slog.Error("MQTT Connection lost")
+	}
 
 	c := mqtt.NewClient(opts)
 
