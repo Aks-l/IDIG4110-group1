@@ -1,0 +1,342 @@
+heat_template_version: 2018-08-31
+
+description: >
+  Smart Home Digital Twin (IDIG4110 group 1) on SkyHiGh. A private network
+  routed to ntnu-internal, a three-node k3s cluster for the microservices and
+  a data VM for Kafka and PostgreSQL. Only k3s-server gets a floating IP; the
+  other VMs are reached through it.
+
+# No custom_constraints on purpose: Horizon renders those as dropdowns that
+# preselect the first item instead of the default.
+parameters:
+  key_name:
+    type: string
+    description: Name of your Nova keypair, injected into every VM
+  image:
+    type: string
+    default: Ubuntu Server 24.04 LTS (Noble Numbat) amd64
+  node_flavor:
+    type: string
+    description: Flavor for the k3s nodes
+    default: gx3.2c8r
+  data_flavor:
+    type: string
+    description: Flavor for the Kafka/PostgreSQL VM
+    default: gx3.2c8r
+  external_network:
+    type: string
+    default: ntnu-internal
+  subnet_cidr:
+    type: string
+    default: 192.168.10.0/24
+  volume_type:
+    type: string
+    default: SSD-300
+  pg_volume_size:
+    type: number
+    description: Size in GB of the PostgreSQL data volume
+    default: 20
+  kafka_volume_size:
+    type: number
+    description: Size in GB of the Kafka data volume
+    default: 20
+
+resources:
+  k3s_token:
+    type: OS::Heat::RandomString
+    properties:
+      length: 48
+
+  # --- Network ---------------------------------------------------------------
+
+  net:
+    type: OS::Neutron::Net
+    properties:
+      name: twin-net
+
+  subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: twin-subnet
+      network: { get_resource: net }
+      cidr: { get_param: subnet_cidr }
+      ip_version: 4
+      dns_nameservers: [129.241.0.200, 129.241.0.201]
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      name: twin-router
+      external_gateway_info:
+        network: { get_param: external_network }
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: router }
+      subnet: { get_resource: subnet }
+
+  # --- Security groups -------------------------------------------------------
+
+  # Public entry point: SSH jump host and HTTP(S) ingress for Traefik.
+  sg_edge:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: sg-edge
+      rules:
+        - { protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 0.0.0.0/0 }
+        - { protocol: tcp, port_range_min: 80, port_range_max: 80, remote_ip_prefix: 0.0.0.0/0 }
+        - { protocol: tcp, port_range_min: 443, port_range_max: 443, remote_ip_prefix: 0.0.0.0/0 }
+        - { protocol: icmp, remote_ip_prefix: 0.0.0.0/0 }
+
+  # k3s nodes talk freely to each other (API, kubelet, flannel VXLAN, SSH).
+  sg_cluster:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: sg-cluster
+      rules:
+        - { protocol: tcp, remote_mode: remote_group_id }
+        - { protocol: udp, remote_mode: remote_group_id }
+        - { protocol: icmp, remote_mode: remote_group_id }
+
+  # Data tier: only the cluster may reach PostgreSQL and Kafka.
+  sg_data:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: sg-data
+      rules:
+        - { protocol: tcp, port_range_min: 5432, port_range_max: 5432, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
+        - { protocol: tcp, port_range_min: 9092, port_range_max: 9092, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
+        - { protocol: icmp, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
+        - { protocol: tcp, port_range_min: 22, port_range_max: 22, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_edge } }
+
+  # --- Ports (fixed IPs are known before the VMs boot) -----------------------
+
+  server_port:
+    type: OS::Neutron::Port
+    properties:
+      name: k3s-server-port
+      network: { get_resource: net }
+      fixed_ips: [{ subnet: { get_resource: subnet } }]
+      security_groups: [{ get_resource: sg_edge }, { get_resource: sg_cluster }]
+
+  agent1_port:
+    type: OS::Neutron::Port
+    properties:
+      name: k3s-agent-1-port
+      network: { get_resource: net }
+      fixed_ips: [{ subnet: { get_resource: subnet } }]
+      security_groups: [{ get_resource: sg_cluster }]
+
+  agent2_port:
+    type: OS::Neutron::Port
+    properties:
+      name: k3s-agent-2-port
+      network: { get_resource: net }
+      fixed_ips: [{ subnet: { get_resource: subnet } }]
+      security_groups: [{ get_resource: sg_cluster }]
+
+  data_port:
+    type: OS::Neutron::Port
+    properties:
+      name: data-vm-port
+      network: { get_resource: net }
+      fixed_ips: [{ subnet: { get_resource: subnet } }]
+      security_groups: [{ get_resource: sg_data }]
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: external_network }
+
+  floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    depends_on: router_interface
+    properties:
+      floatingip_id: { get_resource: floating_ip }
+      port_id: { get_resource: server_port }
+
+  # --- k3s cluster -----------------------------------------------------------
+
+  k3s_server:
+    type: OS::Nova::Server
+    depends_on: router_interface
+    properties:
+      name: k3s-server
+      image: { get_param: image }
+      flavor: { get_param: node_flavor }
+      key_name: { get_param: key_name }
+      networks: [{ port: { get_resource: server_port } }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __K3S_TOKEN__: { get_attr: [k3s_token, value] }
+            __NODE_IP__: { get_attr: [server_port, fixed_ips, 0, ip_address] }
+            __PUBLIC_IP__: { get_attr: [floating_ip, floating_ip_address] }
+          template: |
+            #!/bin/bash
+            set -euo pipefail
+            exec > >(tee -a /var/log/twin-bootstrap.log) 2>&1
+
+            until curl -sfL https://get.k3s.io -o /tmp/k3s-install.sh; do sleep 5; done
+            K3S_TOKEN='__K3S_TOKEN__' sh /tmp/k3s-install.sh server \
+              --node-ip __NODE_IP__ \
+              --tls-san __PUBLIC_IP__
+
+            # Let the ubuntu user run kubectl without sudo.
+            install -d -o ubuntu -g ubuntu -m 700 /home/ubuntu/.kube
+            install -o ubuntu -g ubuntu -m 600 /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
+            echo 'export KUBECONFIG=$HOME/.kube/config' >> /home/ubuntu/.bashrc
+
+  k3s_agent1:
+    type: OS::Nova::Server
+    depends_on: router_interface
+    properties:
+      name: k3s-agent-1
+      image: { get_param: image }
+      flavor: { get_param: node_flavor }
+      key_name: { get_param: key_name }
+      networks: [{ port: { get_resource: agent1_port } }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __K3S_TOKEN__: { get_attr: [k3s_token, value] }
+            __SERVER_IP__: { get_attr: [server_port, fixed_ips, 0, ip_address] }
+            __NODE_IP__: { get_attr: [agent1_port, fixed_ips, 0, ip_address] }
+          template: &agent_script |
+            #!/bin/bash
+            set -euo pipefail
+            exec > >(tee -a /var/log/twin-bootstrap.log) 2>&1
+
+            # The agent keeps retrying until k3s-server is up.
+            until curl -sfL https://get.k3s.io -o /tmp/k3s-install.sh; do sleep 5; done
+            K3S_URL='https://__SERVER_IP__:6443' K3S_TOKEN='__K3S_TOKEN__' sh /tmp/k3s-install.sh agent \
+              --node-ip __NODE_IP__
+
+  k3s_agent2:
+    type: OS::Nova::Server
+    depends_on: router_interface
+    properties:
+      name: k3s-agent-2
+      image: { get_param: image }
+      flavor: { get_param: node_flavor }
+      key_name: { get_param: key_name }
+      networks: [{ port: { get_resource: agent2_port } }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __K3S_TOKEN__: { get_attr: [k3s_token, value] }
+            __SERVER_IP__: { get_attr: [server_port, fixed_ips, 0, ip_address] }
+            __NODE_IP__: { get_attr: [agent2_port, fixed_ips, 0, ip_address] }
+          template: *agent_script
+
+  # --- Data tier -------------------------------------------------------------
+
+  pg_volume:
+    type: OS::Cinder::Volume
+    properties:
+      name: pg-data
+      size: { get_param: pg_volume_size }
+      volume_type: { get_param: volume_type }
+
+  kafka_volume:
+    type: OS::Cinder::Volume
+    properties:
+      name: kafka-data
+      size: { get_param: kafka_volume_size }
+      volume_type: { get_param: volume_type }
+
+  data_vm:
+    type: OS::Nova::Server
+    depends_on: router_interface
+    properties:
+      name: data-vm
+      image: { get_param: image }
+      flavor: { get_param: data_flavor }
+      key_name: { get_param: key_name }
+      networks: [{ port: { get_resource: data_port } }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __PG_VOLUME_ID__: { get_resource: pg_volume }
+            __KAFKA_VOLUME_ID__: { get_resource: kafka_volume }
+          template: |
+            #!/bin/bash
+            set -euo pipefail
+            exec > >(tee -a /var/log/twin-bootstrap.log) 2>&1
+
+            # Volumes are attached after boot; virtio exposes them by the
+            # first 20 characters of the volume ID.
+            mount_volume() {
+              local vol_id="$1" mnt="$2" dev=""
+              for _ in $(seq 1 120); do
+                dev=$(ls /dev/disk/by-id/ 2>/dev/null | grep -m1 "${vol_id:0:20}" || true)
+                [ -n "$dev" ] && break
+                sleep 5
+              done
+              [ -n "$dev" ] || { echo "volume $vol_id never appeared"; return 1; }
+              dev="/dev/disk/by-id/$dev"
+              blkid "$dev" >/dev/null || mkfs.ext4 -q "$dev"
+              mkdir -p "$mnt"
+              local uuid
+              uuid=$(blkid -s UUID -o value "$dev")
+              grep -q "$uuid" /etc/fstab || echo "UUID=$uuid $mnt ext4 defaults,nofail 0 2" >> /etc/fstab
+              mount "$mnt"
+            }
+
+            mount_volume '__PG_VOLUME_ID__' /srv/pgdata
+            mount_volume '__KAFKA_VOLUME_ID__' /srv/kafka
+
+            export DEBIAN_FRONTEND=noninteractive
+            until apt-get update; do sleep 5; done
+            apt-get install -y docker.io docker-compose-v2
+            systemctl enable --now docker
+            usermod -aG docker ubuntu
+
+  pg_attach:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: data_vm }
+      volume_id: { get_resource: pg_volume }
+
+  kafka_attach:
+    type: OS::Cinder::VolumeAttachment
+    depends_on: pg_attach
+    properties:
+      instance_uuid: { get_resource: data_vm }
+      volume_id: { get_resource: kafka_volume }
+
+outputs:
+  floating_ip:
+    description: Public entry point (reachable from the NTNU network or VPN)
+    value: { get_attr: [floating_ip, floating_ip_address] }
+  private_ips:
+    description: Private addresses on twin-net
+    value:
+      k3s-server: { get_attr: [server_port, fixed_ips, 0, ip_address] }
+      k3s-agent-1: { get_attr: [agent1_port, fixed_ips, 0, ip_address] }
+      k3s-agent-2: { get_attr: [agent2_port, fixed_ips, 0, ip_address] }
+      data-vm: { get_attr: [data_port, fixed_ips, 0, ip_address] }
+  ssh:
+    description: SSH commands (other VMs go through k3s-server as a jump host)
+    value:
+      k3s-server:
+        str_replace:
+          template: ssh ubuntu@FIP
+          params: { FIP: { get_attr: [floating_ip, floating_ip_address] } }
+      k3s-agent-1:
+        str_replace:
+          template: ssh -J ubuntu@FIP ubuntu@IP
+          params: { FIP: { get_attr: [floating_ip, floating_ip_address] }, IP: { get_attr: [agent1_port, fixed_ips, 0, ip_address] } }
+      k3s-agent-2:
+        str_replace:
+          template: ssh -J ubuntu@FIP ubuntu@IP
+          params: { FIP: { get_attr: [floating_ip, floating_ip_address] }, IP: { get_attr: [agent2_port, fixed_ips, 0, ip_address] } }
+      data-vm:
+        str_replace:
+          template: ssh -J ubuntu@FIP ubuntu@IP
+          params: { FIP: { get_attr: [floating_ip, floating_ip_address] }, IP: { get_attr: [data_port, fixed_ips, 0, ip_address] } }
