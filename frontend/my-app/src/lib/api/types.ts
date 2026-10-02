@@ -35,6 +35,14 @@ export type Device = {
   name: string;
   type: string;
   on: boolean;
+  roomId?: string;
+  position?: [number, number, number];
+};
+
+export type RoomLayout = {
+  roomId: string;
+  position: [number, number, number];
+  size: [number, number, number];
 };
 
 export type Activity = {

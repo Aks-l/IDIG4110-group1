@@ -35,7 +35,7 @@ export const mockRooms: Record<string, RoomData> = {
     devices: [
       { id: '1', name: 'Oven', type: 'Appliance', on: true },
       { id: '2', name: 'Fridge', type: 'Appliance', on: true },
-      { id: '3', name: 'Range Hood', type: 'Appliance', on: false },
+      { id: '3', name: 'Toaster', type: 'Appliance', on: false },
       { id: '4', name: 'Smoke Sensor', type: 'Sensor', on: true },
     ],
     activity: [

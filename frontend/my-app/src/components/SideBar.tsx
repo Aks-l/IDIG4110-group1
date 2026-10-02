@@ -1,4 +1,5 @@
 import { NavItem } from "./NavItem";
+import { Box } from 'lucide-react';
 
 const prefix = "/dashboard";
 const menuItems = [
@@ -8,7 +9,7 @@ const menuItems = [
     { href: prefix + '/events', label: 'Events' },
     { href: prefix + '/energy', label: 'Energy' },
     { href: prefix + '/automation', label: 'Automation' },
-    { href: prefix + '/3d-model', label: '3D Model' },
+    { href: prefix + '/3d', label: '3D Model', icon: <Box size={16} strokeWidth={2} /> },
     { href: prefix + '/settings', label: 'Settings' },
 ];
 
@@ -20,7 +21,7 @@ export function SideBar() {
         <p className="mt-1 text-sm font-semibold text-[#68766d] max-md:hidden">Your home, at a glance</p>
       </div>
       {menuItems.map((item) => (
-        <NavItem key={item.href} href={item.href} label={item.label} />
+        <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
       ))}
     </aside>
   );

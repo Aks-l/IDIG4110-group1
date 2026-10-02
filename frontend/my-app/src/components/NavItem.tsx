@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 type NavItemProps = {
   href: string;
   label: string;
+  icon?: ReactNode;
 };
 
-export function NavItem({ href, label }: NavItemProps) {
+export function NavItem({ href, label, icon }: NavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
 
@@ -19,8 +21,8 @@ export function NavItem({ href, label }: NavItemProps) {
           isActive ? 'bg-[#1f6f5b] text-white shadow-[0_8px_18px_rgba(31,111,91,0.2)]' : 'text-[#53635a] hover:bg-[#edf3ee] hover:text-[#17221d]'
         }`}
         >
-        <span className="md:hidden">{label.slice(0, 1)}</span>
-        <span className="max-md:hidden">{label}</span>
+        <span className="flex items-center justify-center gap-2 md:hidden">{icon ?? label.slice(0, 1)}</span>
+        <span className="flex items-center gap-2 max-md:hidden">{icon}{label}</span>
     </Link>
   );
 }
