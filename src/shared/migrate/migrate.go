@@ -1,10 +1,10 @@
+// Package migrate wraps golang-migrate for use by any service in this repo.
+// It is config-agnostic: callers pass the migrations directory and database URL.
 package migrate
 
 import (
 	"fmt"
 	"log/slog"
-
-	"IDIG4110/ingest-service/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -15,9 +15,9 @@ type Migrator struct {
 	Migrate *migrate.Migrate
 }
 
-func Init(cfg config.MigrationConfig, url string) (*Migrator, error) {
+func Init(directory, url string) (*Migrator, error) {
 	m, err := migrate.New(
-		fmt.Sprintf("file://%s", cfg.Directory),
+		fmt.Sprintf("file://%s", directory),
 		url,
 	)
 	if err != nil {
