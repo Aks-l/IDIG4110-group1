@@ -20,6 +20,7 @@ twin/{gateway_id}/readings
   "gateway_id": "11111111-1111-1111-1111-111111111111",
   "external_entity_id": "sensor.living_room_temperature",
   "timestamp": "2026-10-01T14:32:10.123456+00:00",
+  "event_id": "326ef27d19415c60c492fe330945f954",
   "value_num": 21.5,
   "value_text": null,
   "device_class": "temperature",
@@ -47,6 +48,7 @@ These enrich a reading when the information exists. Null means "not known for th
 
 | Field | Type | Maps to readings column | Meaning |
 |---|---|---|---|
+| `event_id` | uuid | `event_id` | the source's unique id for this event, when it has one; used for deduplication and for correlating a state change back to a command |
 | `value_num` | number | `value_num` | set when the reading is numeric |
 | `value_text` | string | `value_text` | set when the reading is a state, mode, or any non-numeric value |
 | `device_class` | string | `device_class` | what kind of quantity/state this is (temperature, motion, ...) |
@@ -72,15 +74,16 @@ Exactly one of the two is non-null, enforced by a check constraint on `readings`
 
 This is one concrete translation into the model. Each source has its own adapter; the model does not change.
 
-HA emits a `state_changed` WebSocket event with `data.new_state`. The adapter translates it like this:
+HA emits a `state_changed` WebSocket event. The adapter translates it like this:
 
-- `external_entity_id` = `new_state.entity_id` verbatim.
+- `external_entity_id` = `data.entity_id`, the subject of the event. Not `new_state.entity_id`: that is a snapshot field HA repeats inside the state object. The two are equal in the common case, but the event subject is the authoritative identifier, and they can diverge (for instance on entity renames, where `old_state` and `new_state` carry different ids).
 - `timestamp` = event `time_fired` (fall back to `new_state.last_changed` only if `time_fired` is absent).
 - Value: HA `new_state.state` is always a string. Try to parse it as a finite float. If it parses and is not a sentinel state, put it in `value_num`. Otherwise put the raw string in `value_text`.
 - Sentinel states such as `unavailable`, `unknown`, and `none` must go to `value_text`, never parsed to a number or dropped. They carry meaning (device offline, no data yet) that the twin and rules need.
 - `unit` = `new_state.attributes.unit_of_measurement` when present, else null.
 - `device_class` = `new_state.attributes.device_class` when present, else null.
-- `attributes` = the full HA `attributes` object, unmodified. In addition, the adapter injects `new_state.context.id` into `attributes.context_id`. HA puts `context` beside `attributes`, not inside it, so without this step the event id would be dropped. That id is what later lets us correlate a state change back to a command we issued.
+- `event_id` = the event's `context.id`. HA puts `context` beside `attributes`, not inside it, so it needs an explicit mapping. This is the deduplication key when HA re-sends states on reconnect, and it lets us correlate a state change back to a command we issued.
+- `attributes` = the full HA `attributes` object, unmodified.
 
 HA event (trimmed):
 
@@ -88,6 +91,11 @@ HA event (trimmed):
 {
   "event_type": "state_changed",
   "time_fired": "2026-10-01T14:32:10.123456+00:00",
+  "context": {
+    "id": "326ef27d19415c60c492fe330945f954",
+    "parent_id": null,
+    "user_id": null
+  },
   "data": {
     "entity_id": "sensor.living_room_temperature",
     "new_state": {
@@ -97,13 +105,18 @@ HA event (trimmed):
         "device_class": "temperature",
         "unit_of_measurement": "°C",
         "friendly_name": "Living room temperature"
+      },
+      "context": {
+        "id": "326ef27d19415c60c492fe330945f954",
+        "parent_id": null,
+        "user_id": null
       }
     }
   }
 }
 ```
 
-This produces the envelope example at the top: `state: "21.5"` becomes `value_num: 21.5`, `device_class` and `unit` are lifted to columns, and the full `attributes` object is preserved. A binary sensor (`state: "on"`, no unit) becomes `value_text: "on"`, `value_num: null`, `unit: null`.
+This produces the envelope example at the top: `data.entity_id` becomes `external_entity_id`, `time_fired` becomes `timestamp`, `context.id` becomes `event_id`, `state: "21.5"` becomes `value_num: 21.5`, and the full `attributes` object is preserved. A binary sensor (`state: "on"`, no unit) becomes `value_text: "on"`, `value_num: null`, `unit: null`.
 
 ## Guarantees
 

@@ -3,6 +3,7 @@ CREATE TABLE readings (
     recorded_at        timestamptz NOT NULL DEFAULT now(),
     gateway_id         uuid NOT NULL,
     external_entity_id text NOT NULL,
+    event_id           uuid,
     device_class       text,
     value_num          double precision,
     value_text         text,
