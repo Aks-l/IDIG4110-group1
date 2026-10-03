@@ -26,8 +26,6 @@ mqtt:
   workerBufferSize: 1000
   topic: "sensors/+/state"
 
-  
-
 migration:
   directory: "migrations"
   
