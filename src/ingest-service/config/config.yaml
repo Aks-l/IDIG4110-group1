@@ -24,6 +24,7 @@ mqtt:
   cleanSession: false
   workerCount: 10
   workerBufferSize: 1000
+  topic: "sensors/+/state"
 
   
 

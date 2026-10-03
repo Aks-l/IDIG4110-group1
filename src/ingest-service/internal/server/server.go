@@ -46,7 +46,12 @@ func Run() error {
 	if err != nil {
 		return err
 	}
+
 	defer client.Close()
+
+	if err := client.Subscribe(cfg.Mqtt.Topic); err != nil {
+		return err
+	}
 	
 	router := NewRouter()
 

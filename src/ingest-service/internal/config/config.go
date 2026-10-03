@@ -42,6 +42,7 @@ type MqttConfig struct {
 	CleanSession         bool   `yaml:"cleanSession"`
 	WorkerCount          int    `yaml:"workerCount"`
 	WorkerBufferSize     int    `yaml:"WorkerBufferSize"`
+	Topic                string `yaml:"topic"`
 }
 
 type MigrationConfig struct {
