@@ -40,6 +40,7 @@ func Run() error {
 	}
 	
 	coll := mqttclient.NewCollector(cfg.Mqtt.WorkerCount, cfg.Mqtt.WorkerBufferSize)
+	coll.StartWorkers()
 	defer coll.Close()
 
 	client, err := mqttclient.Init(cfg.Mqtt, coll.MQTTHandler)
@@ -66,7 +67,7 @@ func Run() error {
 
 	serverError := make(chan error, 1)
 	go func() {
-		slog.Info("Starting server", "port", "8080")
+		slog.Info("Starting server", "port", strconv.Itoa(cfg.Server.Port))
 		err := httpServer.ListenAndServe()
 		serverError <- err
 	}()
