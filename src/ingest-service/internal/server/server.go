@@ -16,6 +16,8 @@ import (
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/ingest-service/internal/migrate"
 	"IDIG4110/ingest-service/internal/mqttclient"
+	"IDIG4110/ingest-service/internal/repository"
+	"IDIG4110/ingest-service/internal/service"
 )
 
 func Run() error {
@@ -38,8 +40,15 @@ func Run() error {
 	if err := m.CheckMigrationStatus(); err != nil {
 		return err
 	}
-	
-	coll := mqttclient.NewCollector(cfg.Mqtt.WorkerCount, cfg.Mqtt.WorkerBufferSize)
+
+	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
+	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo)
+
+	coll := mqttclient.NewCollector(
+		cfg.Mqtt.WorkerCount,
+		cfg.Mqtt.WorkerBufferSize,
+		sensorIngestSvc,
+	)
 	coll.StartWorkers()
 	defer coll.Close()
 
@@ -53,7 +62,7 @@ func Run() error {
 	if err := client.Subscribe(cfg.Mqtt.Topic); err != nil {
 		return err
 	}
-	
+
 	router := NewRouter()
 
 	httpServer := http.Server{

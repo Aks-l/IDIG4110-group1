@@ -17,7 +17,7 @@ type Database struct {
 	Url string
 }
 
-func Init(cfg config.DatabaseConfig) (Database, error) {
+func Init(cfg config.DatabaseConfig) (*Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -25,16 +25,16 @@ func Init(cfg config.DatabaseConfig) (Database, error) {
 
 	conn, err := pgx.Connect(ctx, url)
 	if err != nil {
-		return Database{}, err
+		return &Database{}, err
 	}
 
 	if err := conn.Ping(ctx); err != nil {
-		return Database{}, err
+		return &Database{}, err
 	}
 
 	slog.Info("Successfully connected to database")
 
-	return Database{
+	return &Database{
 		Conn: conn,
 		Url:  url,
 	}, nil

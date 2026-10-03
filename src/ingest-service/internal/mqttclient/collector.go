@@ -16,7 +16,7 @@ type Collector struct {
 	svc     domain.SensorIngestSvc
 }
 
-func NewCollector(workerCount int, bufferSize int) *Collector {
+func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Collector {
 	w := make([]chan dto.SensorStateEvent, workerCount)
 
 	for i := range w {
@@ -25,6 +25,7 @@ func NewCollector(workerCount int, bufferSize int) *Collector {
 
 	return &Collector{
 		workers: w,
+		svc:     svc,
 	}
 }
 
