@@ -45,12 +45,14 @@ Each database runs in its own container. `ingest_db` uses the TimescaleDB image 
 | `incidents` | Raised when rules trigger; severity and lifecycle status |
 | `notifications` | Per-channel delivery tracking per incident |
 
-### identity_db (planned)
+### identity_db (exists, temporary)
 
 | Table | Purpose |
 |---|---|
-| `users` | User accounts |
-| `home_members` | Which users belong to which homes, with a role |
+| `users` | Minimal local user records. Temporary: authentication moves to the external auth middleware |
+| `home_members` | Which users belong to which homes, with a role. `user_id` is a soft ref so middleware user ids can replace local ones without a schema change |
+
+Authentication and the authorization of service and data access are owned by the external auth middleware, not by this database. When the middleware lands, `users` is retired or reduced to a read cache; `home_members` remains as the platform's home-level access data, keyed by middleware user ids.
 
 ## Rules
 
