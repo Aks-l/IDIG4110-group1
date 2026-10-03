@@ -15,6 +15,7 @@ import (
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/ingest-service/internal/migrate"
+	"IDIG4110/ingest-service/internal/mqttclient"
 )
 
 func Run() error {
@@ -37,7 +38,16 @@ func Run() error {
 	if err := m.CheckMigrationStatus(); err != nil {
 		return err
 	}
+	
+	coll := mqttclient.NewCollector(cfg.Mqtt.WorkerCount, cfg.Mqtt.WorkerBufferSize)
+	defer coll.Close()
 
+	client, err := mqttclient.Init(cfg.Mqtt, coll.MQTTHandler)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	
 	router := NewRouter()
 
 	httpServer := http.Server{

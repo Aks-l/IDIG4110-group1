@@ -37,6 +37,10 @@ func Init(cfg config.MqttConfig, msg mqtt.MessageHandler) (*MqttClient, error) {
 
 	c := mqtt.NewClient(opts)
 
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
 	return &MqttClient{
 		client: c,
 	}, nil

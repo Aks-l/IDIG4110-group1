@@ -21,7 +21,11 @@ mqtt:
   connectRetryInterval: 5
   keepAlive: 30
   pingTimeOut: 10
-  CleanSession: false
+  cleanSession: false
+  workerCount: 10
+  workerBufferSize: 1000
+
+  
 
 migration:
   directory: "migrations"
