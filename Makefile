@@ -37,7 +37,7 @@ else
 		echo "$(ENV_MSG)"; \
 		go run cmd/migrate/main.go create $(NAME); \
 	else \
-		echo "❌ Error: Docker container not running and Go not installed"; \
+		echo "Error: Docker container not running and Go not installed"; \
 		echo "Please run: make up"; \
 		exit 1; \
 	fi

@@ -54,6 +54,8 @@ func main() {
 		handleDown(ctx, m, args)
 	case "version":
 		handleVersion(m)
+	case "create":
+		handleCreate(cfg.Migration.Directory, args)
 	default:
 		slog.Error("Invalid command", "command", command)
 		os.Exit(1)
@@ -120,6 +122,53 @@ func handleDown(ctx context.Context, m *migrate.Migrator, args []string) {
 		slog.Info("Rollback completed successfully", "status", "ok")
 		return
 	}
+}
+
+func handleCreate(migrationsDir string, args []string) {
+	if len(args) < 2 {
+		slog.Error("Migration name required")
+		fmt.Println("Usage: migrate create NAME")
+		os.Exit(1)
+	}
+
+	name := args[1]
+	timestamp := time.Now().Format("20060102150405")
+
+	upFile := fmt.Sprintf("%s/%s_%s.up.sql", migrationsDir, timestamp, name)
+	downFile := fmt.Sprintf("%s/%s_%s.down.sql", migrationsDir, timestamp, name)
+
+	upContent := fmt.Sprintf(`-- Migration: %s
+-- Created: %s
+-- Description: Add description here
+
+BEGIN;
+
+-- Add your migration SQL here
+
+COMMIT;
+`, name, time.Now().Format(time.RFC3339))
+
+	downContent := fmt.Sprintf(`-- Migration: %s (rollback)
+-- Created: %s
+
+BEGIN;
+
+-- Add your rollback SQL here
+
+COMMIT;
+`, name, time.Now().Format(time.RFC3339))
+
+	if err := os.WriteFile(upFile, []byte(upContent), 0644); err != nil {
+		slog.Error("Failed to create up migration", "err", err)
+		os.Exit(1)
+	}
+
+	if err := os.WriteFile(downFile, []byte(downContent), 0644); err != nil {
+		slog.Error("Failed to create down migration", "err", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Migration files created", "up", upFile, "down", downFile)
 }
 
 func handleVersion(m *migrate.Migrator) {
