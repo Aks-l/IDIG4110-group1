@@ -1,3 +1,5 @@
+// Command migrate runs database migrations for api-gateway.
+// Config comes from env vars: DB_URL (required), MIGRATIONS_DIR (default "migrations").
 package main
 
 import (
@@ -9,38 +11,38 @@ import (
 	"strconv"
 	"time"
 
-	"IDIG4110/ingest-service/internal/config"
-	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/shared/migrate"
 )
 
 func main() {
-	slog.Info("Staring migration cmd")
-
 	flag.Parse()
 	args := flag.Args()
 	if len(args) == 0 {
+		fmt.Println("Usage: migrate <up|down|version|create> [args]")
 		os.Exit(1)
 	}
-
 	command := args[0]
 
-	cfg, err := config.Load("config/config.yaml")
-	if err != nil {
-		slog.Error("Failed to load configs", "error", err)
+	dir := os.Getenv("MIGRATIONS_DIR")
+	if dir == "" {
+		dir = "migrations"
+	}
+
+	// create needs no database
+	if command == "create" {
+		handleCreate(dir, args)
+		return
+	}
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		slog.Error("DB_URL is required")
 		os.Exit(1)
 	}
 
-	db, err := db.Init(cfg.Database)
+	m, err := migrate.Init(dir, dbURL)
 	if err != nil {
-		slog.Error("Failed to init db", "error", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-
-	m, err := migrate.Init(cfg.Migration.Directory, db.Url)
-	if err != nil {
-		slog.Error("Failed to init db", "error", err)
+		slog.Error("Failed to init migrator", "error", err)
 		os.Exit(1)
 	}
 
@@ -54,8 +56,6 @@ func main() {
 		handleDown(ctx, m, args)
 	case "version":
 		handleVersion(m)
-	case "create":
-		handleCreate(cfg.Migration.Directory, args)
 	default:
 		slog.Error("Invalid command", "command", command)
 		os.Exit(1)
@@ -104,7 +104,6 @@ func handleDown(ctx context.Context, m *migrate.Migrator, args []string) {
 		return
 	}
 
-	slog.Info("Rolling back migrations...", "steps", steps)
 	done := make(chan error, 1)
 	go func() {
 		done <- m.Migrate.Steps(-steps)
@@ -113,14 +112,12 @@ func handleDown(ctx context.Context, m *migrate.Migrator, args []string) {
 	select {
 	case <-ctx.Done():
 		slog.Error("migration timeout exceeded")
-		return
 	case err := <-done:
 		if err != nil {
 			slog.Error("rollback failed", "error", err)
 			return
 		}
-		slog.Info("Rollback completed successfully", "status", "ok")
-		return
+		slog.Info("Rollback completed successfully")
 	}
 }
 
@@ -162,7 +159,6 @@ COMMIT;
 		slog.Error("Failed to create up migration", "err", err)
 		os.Exit(1)
 	}
-
 	if err := os.WriteFile(downFile, []byte(downContent), 0644); err != nil {
 		slog.Error("Failed to create down migration", "err", err)
 		os.Exit(1)
@@ -183,7 +179,6 @@ func handleVersion(m *migrate.Migrator) {
 	fmt.Printf("Current version: %d\n", version)
 	if dirty {
 		fmt.Println("Status: DIRTY (migration failed or interrupted)")
-		fmt.Println("\nTo recover, use: migrate force VERSION")
 	} else {
 		fmt.Println("Status: Clean")
 	}

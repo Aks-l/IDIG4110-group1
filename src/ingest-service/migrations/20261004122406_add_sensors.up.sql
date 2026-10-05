@@ -4,8 +4,6 @@
 
 BEGIN;
 
-CREATE SCHEMA IF NOT EXISTS ingest;
-
 CREATE TABLE IF NOT EXISTS ingest.sensor_data (
     id          BIGSERIAL PRIMARY KEY,
     entityID    VARCHAR(255) NOT NULL,

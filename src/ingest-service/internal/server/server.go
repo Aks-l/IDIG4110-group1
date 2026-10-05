@@ -14,7 +14,7 @@ import (
 
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
-	"IDIG4110/ingest-service/internal/migrate"
+	"IDIG4110/shared/migrate"
 	"IDIG4110/ingest-service/internal/mqttclient"
 	"IDIG4110/ingest-service/internal/repository"
 	"IDIG4110/ingest-service/internal/service"
@@ -31,7 +31,7 @@ func Run() error {
 		return err
 	}
 	defer db.Close()
-	m, err := migrate.Init(cfg.Migration, db.Url)
+	m, err := migrate.Init(cfg.Migration.Directory, db.Url)
 	if err != nil {
 		return err
 	}

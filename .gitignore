@@ -25,6 +25,9 @@ out/
 .eslintcache
 *.tsbuildinfo
 
+.next/
+next-env.d.ts
+
 *.exe
 *.exe~
 *.dll

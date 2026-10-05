@@ -6,11 +6,11 @@ server:
   maxHeaderBytes: 1048576
 
 database:
-  host: "database"
+  host: "ingest-db"
   port: 5432
-  user: "postgres"
-  name: "postgres"
-  password: "postgres"
+  user: "ingest"
+  name: "ingest_db"
+  password: "ingest"
   ssl: "disable"
 
 mqtt:

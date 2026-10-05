@@ -1,0 +1,89 @@
+services:
+  # Credentials via env (see .env.example).
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./infra/config/mosquitto/:/mosquitto/config/
+
+  ingest-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${INGEST_DB_USER:-ingest}
+      POSTGRES_PASSWORD: ${INGEST_DB_PASSWORD:-ingest}
+      POSTGRES_DB: ${INGEST_DB_NAME:-ingest_db}
+    volumes:
+      - ingest_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  twin-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${TWIN_DB_USER:-twin}
+      POSTGRES_PASSWORD: ${TWIN_DB_PASSWORD:-twin}
+      POSTGRES_DB: ${TWIN_DB_NAME:-twin_db}
+    volumes:
+      - twin_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rules-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${RULES_DB_USER:-rules}
+      POSTGRES_PASSWORD: ${RULES_DB_PASSWORD:-rules}
+      POSTGRES_DB: ${RULES_DB_NAME:-rules_db}
+    volumes:
+      - rules_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  identity-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${IDENTITY_DB_USER:-identity}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity}
+      POSTGRES_DB: ${IDENTITY_DB_NAME:-identity_db}
+    volumes:
+      - identity_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ingest-service:
+    build:
+      context: .
+      dockerfile: infra/prod/ingest-service.prod.Dockerfile
+    depends_on:
+      ingest-db:
+        condition: service_healthy
+
+  device-simulator:
+    build:
+      context: .
+      dockerfile: infra/prod/device-simulator.prod.Dockerfile
+    depends_on:
+      - mosquitto
+
+volumes:
+  ingest_db_data:
+  twin_db_data:
+  rules_db_data:
+  identity_db_data:
