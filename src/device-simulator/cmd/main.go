@@ -20,6 +20,7 @@ func main() {
 		slog.Error("broker failed", "error", err)
 		os.Exit(1)	
 	}
+	defer b.Close()
 
 	s := simulator.Init(b, cfg.Mqtt)
 	s.Start()

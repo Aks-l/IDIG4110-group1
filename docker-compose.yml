@@ -29,6 +29,7 @@ services:
       - ./src/shared:/shared
     depends_on:
       - database
+      - mosquitto
 
   device-simulator:
     build:
@@ -38,6 +39,7 @@ services:
       - "8082:8080"
     volumes:
       - ./src/device-simulator:/app
+      - ./src/shared:/shared
     depends_on:
       - ingest-service
       - mosquitto
