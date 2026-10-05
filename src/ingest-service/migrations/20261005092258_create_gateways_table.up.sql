@@ -1,4 +1,8 @@
-CREATE TABLE gateways (
+-- Migration: create_gateways_table
+-- Created: 2026-10-05T09:22:58Z
+-- Description: Gateway registry
+
+CREATE TABLE ingest.gateways (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name             text NOT NULL,
     gateway_type     text NOT NULL CHECK (gateway_type IN ('home_assistant')),

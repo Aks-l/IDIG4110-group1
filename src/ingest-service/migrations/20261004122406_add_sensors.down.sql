@@ -4,6 +4,5 @@
 BEGIN;
 
 DROP TABLE IF EXISTS ingest.sensor_data;
-DROP SCHEMA IF EXISTS ingest;
 
 COMMIT;

@@ -21,7 +21,7 @@ func Init(cfg config.DatabaseConfig) (*Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.User, cfg.Password, cfg.Host, strconv.Itoa(cfg.Port), cfg.Name, cfg.SSL)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=public", cfg.User, cfg.Password, cfg.Host, strconv.Itoa(cfg.Port), cfg.Name, cfg.SSL)
 
 	conn, err := pgx.Connect(ctx, url)
 	if err != nil {

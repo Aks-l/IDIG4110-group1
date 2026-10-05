@@ -1,6 +1,10 @@
-CREATE TABLE commands (
+-- Migration: create_commands_table
+-- Created: 2026-10-05T09:23:22Z
+-- Description: Device command registry
+
+CREATE TABLE ingest.commands (
     id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    gateway_id         uuid NOT NULL REFERENCES gateways (id),
+    gateway_id         uuid NOT NULL REFERENCES ingest.gateways (id),
     external_entity_id text NOT NULL,
     command            text NOT NULL,
     parameters         jsonb,
@@ -13,4 +17,4 @@ CREATE TABLE commands (
     expires_at         timestamptz
 );
 
-CREATE INDEX commands_gateway_issued_idx ON commands (gateway_id, issued_at DESC);
+CREATE INDEX commands_gateway_issued_idx ON ingest.commands (gateway_id, issued_at DESC);
