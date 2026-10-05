@@ -40,6 +40,9 @@ type MqttConfig struct {
 	KeepAlive            int    `yaml:"keepAlive"`
 	PingTimeout          int    `yaml:"pingTimeout"`
 	CleanSession         bool   `yaml:"cleanSession"`
+	WorkerCount          int    `yaml:"workerCount"`
+	WorkerBufferSize     int    `yaml:"WorkerBufferSize"`
+	Topic                string `yaml:"topic"`
 }
 
 type MigrationConfig struct {
