@@ -1,7 +1,13 @@
 package simulator
 
 import (
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"time"
+
 	"IDIG4110/device-simulator/internal/broker"
+	"IDIG4110/device-simulator/internal/config"
 )
 
 type Simulator struct {
@@ -12,6 +18,34 @@ type Simulator struct {
 	qos         byte
 }
 
-func Init(b broker.Broker, ) *Simulator {
-	return nil
+func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
+	return &Simulator{
+		broker:      b,
+		interval:    cfg.Interval,
+		deviceCount: cfg.DeviceCount,
+		qos:         byte(0),
+	}
+}
+
+func (s *Simulator) Start() {
+	for i := 0; i < s.deviceCount; i++ {
+		eventId := fmt.Sprintf("b%015d", i+1)
+		go s.run(eventId)
+	}
+	select {}
+}
+
+func (s *Simulator) run(id string) {
+	for {
+		mock := GenerateMockData(id)
+		payload, err := json.Marshal(mock)
+		if err != nil {
+			slog.Error("JSON marshal failed", "error", err)
+		}
+
+		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")	
+		s.broker.Publish(topic, s.qos, payload)
+
+		time.Sleep(time.Duration(s.interval) * time.Second)
+	}
 }

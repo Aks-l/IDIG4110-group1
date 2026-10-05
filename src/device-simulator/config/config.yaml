@@ -7,6 +7,7 @@ mqtt:
   keepAlive: 30
   pingTimeOut: 10
   cleanSession: false
-  workerCount: 10
-  workerBufferSize: 1000
-  topic: "sensors/+/state"
+  topic: "sensors/"
+  interval: 10
+  deviceCount: 200
+  

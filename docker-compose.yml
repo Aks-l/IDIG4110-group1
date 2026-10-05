@@ -38,6 +38,9 @@ services:
       - "8082:8080"
     volumes:
       - ./src/device-simulator:/app
+    depends_on:
+      - ingest-service
+      - mosquitto
 
 volumes:
   postgres_data_dev:

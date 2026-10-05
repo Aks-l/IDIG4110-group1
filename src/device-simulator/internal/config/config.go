@@ -20,9 +20,9 @@ type MqttConfig struct {
 	KeepAlive            int    `yaml:"keepAlive"`
 	PingTimeout          int    `yaml:"pingTimeout"`
 	CleanSession         bool   `yaml:"cleanSession"`
-	WorkerCount          int    `yaml:"workerCount"`
-	WorkerBufferSize     int    `yaml:"WorkerBufferSize"`
 	Topic                string `yaml:"topic"`
+	Interval             int    `yaml:"interval"`
+	DeviceCount          int    `yaml:"deviceCount"`
 }
 
 func Load(configPath string) (*Config, error) {
@@ -32,7 +32,7 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(file,&cfg); err != nil {
+	if err := yaml.Unmarshal(file, &cfg); err != nil {
 		return nil, fmt.Errorf("paring yaml file: %w", err)
 	}
 
