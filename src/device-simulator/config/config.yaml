@@ -1,0 +1,12 @@
+mqtt:
+  url: "tcp://mosquitto:1883"
+  clientId: "simulator"
+  autoConnect: true
+  connectRetry: true
+  connectRetryInterval: 5
+  keepAlive: 30
+  pingTimeOut: 10
+  cleanSession: false
+  workerCount: 10
+  workerBufferSize: 1000
+  topic: "sensors/+/state"

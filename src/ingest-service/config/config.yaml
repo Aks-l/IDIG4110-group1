@@ -15,7 +15,7 @@ database:
 
 mqtt:
   url: "tcp://mosquitto:1883"
-  clientId: "1234"
+  clientId: "ingest-service"
   autoConnect: true
   connectRetry: true
   connectRetryInterval: 5
