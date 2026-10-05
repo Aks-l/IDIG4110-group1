@@ -1,7 +1,7 @@
 CREATE TABLE rules (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id        uuid NOT NULL,
-    name           text NOT NULL,
+    name           varchar(255) NOT NULL,
     description    text,
     enabled        boolean NOT NULL DEFAULT true,
     priority       int NOT NULL DEFAULT 0,

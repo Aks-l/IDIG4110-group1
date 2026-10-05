@@ -5,13 +5,13 @@
 CREATE TABLE ingest.commands (
     id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     gateway_id         uuid NOT NULL REFERENCES ingest.gateways (id),
-    external_entity_id text NOT NULL,
-    command            text NOT NULL,
+    external_entity_id varchar(255) NOT NULL,
+    command            varchar(100) NOT NULL,
     parameters         jsonb,
-    status             text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'acknowledged', 'failed', 'timeout')),
+    status             varchar(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'acknowledged', 'failed', 'timeout')),
     result             jsonb,
     correlation_id     uuid NOT NULL UNIQUE,
-    issued_by          text,
+    issued_by          varchar(255),
     issued_at          timestamptz NOT NULL DEFAULT now(),
     acked_at           timestamptz,
     expires_at         timestamptz

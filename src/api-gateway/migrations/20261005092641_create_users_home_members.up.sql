@@ -4,8 +4,8 @@
 -- middleware; these tables are then retired or reduced to a read cache.
 CREATE TABLE users (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    email        text NOT NULL,
-    display_name text NOT NULL,
+    email        varchar(320) NOT NULL,
+    display_name varchar(255) NOT NULL,
     created_at   timestamptz NOT NULL DEFAULT now(),
     updated_at   timestamptz NOT NULL DEFAULT now()
 );
@@ -17,7 +17,7 @@ CREATE TABLE home_members (
     -- without a schema change.
     user_id    uuid NOT NULL,
     home_id    uuid NOT NULL,
-    role       text NOT NULL CHECK (role IN ('owner', 'member', 'viewer')),
+    role       varchar(20) NOT NULL CHECK (role IN ('owner', 'member', 'viewer')),
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, home_id)
 );
