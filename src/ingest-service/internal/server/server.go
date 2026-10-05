@@ -15,6 +15,9 @@ import (
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/ingest-service/internal/migrate"
+	"IDIG4110/ingest-service/internal/mqttclient"
+	"IDIG4110/ingest-service/internal/repository"
+	"IDIG4110/ingest-service/internal/service"
 )
 
 func Run() error {
@@ -38,6 +41,28 @@ func Run() error {
 		return err
 	}
 
+	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
+	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo)
+
+	coll := mqttclient.NewCollector(
+		cfg.Mqtt.WorkerCount,
+		cfg.Mqtt.WorkerBufferSize,
+		sensorIngestSvc,
+	)
+	coll.StartWorkers()
+	defer coll.Close()
+
+	client, err := mqttclient.Init(cfg.Mqtt, coll.MQTTHandler)
+	if err != nil {
+		return err
+	}
+
+	defer client.Close()
+
+	if err := client.Subscribe(cfg.Mqtt.Topic); err != nil {
+		return err
+	}
+
 	router := NewRouter()
 
 	httpServer := http.Server{
@@ -51,7 +76,7 @@ func Run() error {
 
 	serverError := make(chan error, 1)
 	go func() {
-		slog.Info("Starting server", "port", "8080")
+		slog.Info("Starting server", "port", strconv.Itoa(cfg.Server.Port))
 		err := httpServer.ListenAndServe()
 		serverError <- err
 	}()

@@ -26,6 +26,7 @@ services:
       - "8081:8080"
     volumes:
       - ./src/ingest-service:/app
+      - ./src/shared:/shared
     depends_on:
       - database
 
