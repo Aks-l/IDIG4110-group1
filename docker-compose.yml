@@ -89,7 +89,8 @@ services:
     depends_on:
       ingest-db:
         condition: service_healthy
-      - mosquitto
+      mosquitto:
+        condition: service_started
 
   device-simulator:
     build:
