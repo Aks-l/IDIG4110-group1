@@ -74,7 +74,7 @@ When service A changes something service B cares about, A publishes an MQTT even
 
 ### 5. Vocabularies are enforced and documented
 
-Enumerated values (gateway types, command names, relation types, incident severities) are check constraints in SQL, listed below. Adding a value is a deliberate, reviewed migration, not a free-form string.
+Enumerated values (gateway types, statuses, relation types, incident severities) are check constraints in SQL and listed below. Adding an enumerated value is a deliberate, reviewed migration, not a free-form string; open-ended command names are documented separately.
 
 ### 6. Extension data goes in JSONB, not new columns
 

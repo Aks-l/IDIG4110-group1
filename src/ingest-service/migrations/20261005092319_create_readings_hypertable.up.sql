@@ -13,7 +13,7 @@ CREATE TABLE ingest.readings (
     value_text         text,
     unit               varchar(50),
     attributes         jsonb,
-    CHECK (value_num IS NOT NULL OR value_text IS NOT NULL)
+    CHECK ((value_num IS NOT NULL) <> (value_text IS NOT NULL))
 );
 
 SELECT create_hypertable('ingest.readings', 'time');
