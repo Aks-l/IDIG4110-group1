@@ -41,7 +41,7 @@ type MqttConfig struct {
 	PingTimeout          int    `yaml:"pingTimeout"`
 	CleanSession         bool   `yaml:"cleanSession"`
 	WorkerCount          int    `yaml:"workerCount"`
-	WorkerBufferSize     int    `yaml:"WorkerBufferSize"`
+	WorkerBufferSize     int    `yaml:"workerBufferSize"`
 	Topic                string `yaml:"topic"`
 }
 
