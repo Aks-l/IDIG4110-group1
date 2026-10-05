@@ -9,11 +9,11 @@ import (
 
 	"IDIG4110/ingest-service/internal/config"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Database struct {
-	Conn *pgx.Conn
+	Conn *pgxpool.Pool
 	Url string
 }
 
@@ -23,7 +23,7 @@ func Init(cfg config.DatabaseConfig) (*Database, error) {
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=public", cfg.User, cfg.Password, cfg.Host, strconv.Itoa(cfg.Port), cfg.Name, cfg.SSL)
 
-	conn, err := pgx.Connect(ctx, url)
+	conn, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return &Database{}, err
 	}
@@ -41,8 +41,5 @@ func Init(cfg config.DatabaseConfig) (*Database, error) {
 }
 
 func (d *Database) Close() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	d.Conn.Close(ctx)
+	d.Conn.Close()
 }
