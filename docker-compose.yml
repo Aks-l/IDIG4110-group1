@@ -89,6 +89,7 @@ services:
     depends_on:
       ingest-db:
         condition: service_healthy
+      - mosquitto
 
   device-simulator:
     build:
@@ -98,7 +99,9 @@ services:
       - "8082:8080"
     volumes:
       - ./src/device-simulator:/app
+      - ./src/shared:/shared
     depends_on:
+      - ingest-service
       - mosquitto
 
 volumes:
