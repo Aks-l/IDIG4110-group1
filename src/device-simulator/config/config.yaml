@@ -9,5 +9,5 @@ mqtt:
   cleanSession: false
   topic: "sensors"
   interval: 10
-  deviceCount: 200
+  deviceCount: 2
   

@@ -56,6 +56,7 @@ func Run() error {
 	if err != nil {
 		return err
 	}
+	slog.Info("starting mqtt client", "topic", cfg.Mqtt.Topic)
 
 	defer client.Close()
 

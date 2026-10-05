@@ -22,6 +22,7 @@ func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
 	return &Simulator{
 		broker:      b,
 		interval:    cfg.Interval,
+		topic:       cfg.Topic,
 		deviceCount: cfg.DeviceCount,
 		qos:         byte(0),
 	}
@@ -43,7 +44,7 @@ func (s *Simulator) run(id string) {
 			slog.Error("JSON marshal failed", "error", err)
 		}
 
-		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")	
+		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")
 		s.broker.Publish(topic, s.qos, payload)
 
 		time.Sleep(time.Duration(s.interval) * time.Second)
