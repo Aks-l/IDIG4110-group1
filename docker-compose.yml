@@ -115,6 +115,29 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_started
+      kafka:
+        condition: service_started
+
+  rules-engine:
+    build:
+      context: .
+      dockerfile: infra/dev/rules-engine.Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      DB_HOST: rules-db
+      DB_USER: rules
+      DB_PASSWORD: rules
+      DB_NAME: rules_db
+      KAFKA_BROKERS: kafka:29092
+    volumes:
+      - ./src/rules-engine:/app
+      - ./src/shared:/shared
+    depends_on:
+      rules-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
   device-simulator:
     build:

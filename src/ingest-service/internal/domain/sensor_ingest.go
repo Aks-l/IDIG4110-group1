@@ -17,3 +17,8 @@ type SensorIngestSvc interface {
 	Create(ctx context.Context, payload dto.SensorStateEvent) error
 }
 
+// ReadingPublisher hands normalized readings to the other services
+// (Kafka topic twin.readings).
+type ReadingPublisher interface {
+	PublishReading(ctx context.Context, reading dto.Reading) error
+}
