@@ -3,6 +3,7 @@ package server
 import (
 	"IDIG4110/auth-service/internal/config"
 	"IDIG4110/auth-service/internal/db"
+	"IDIG4110/auth-service/internal/user"
 	"context"
 	"errors"
 	"fmt"
@@ -25,7 +26,13 @@ func Run() error {
 		return err
 	}
 
-	router := NewRouter()
+	userRepo := user.NewUserRepository(db.Pool)
+	userService := user.NewUserService(userRepo)
+	userHandler := user.NewUserHandler(userService)
+
+	handlers := NewHandlers(userHandler)
+	
+	router := NewRouter(handlers)
 
 	httpServer := http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

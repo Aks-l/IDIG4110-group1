@@ -10,7 +10,7 @@ import (
 )
 
 type Database struct {
-	pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 func (db *Database) Init(cfg config.DatabaseConfig) error {
@@ -18,7 +18,7 @@ func (db *Database) Init(cfg config.DatabaseConfig) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db.pool, err = database.NewPostgresPool(ctx, cfg.URL)
+	db.Pool, err = database.NewPostgresPool(ctx, cfg.URL)
 	if err != nil {
 		return err
 	}
@@ -27,5 +27,5 @@ func (db *Database) Init(cfg config.DatabaseConfig) error {
 }
 
 func (db *Database) Close() {
-	db.pool.Close()
+	db.Pool.Close()
 }
