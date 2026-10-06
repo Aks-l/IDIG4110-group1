@@ -25,6 +25,17 @@ func GetBool(key string, fallback bool) bool {
 	return fallback
 }
 
+func GetInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return fallback
+		}
+		return i
+	}
+	return fallback
+}
+
 func Required(key string) (string, error) {
 	v := strings.TrimSpace(os.Getenv(key))
 	if v == "" {

@@ -103,10 +103,42 @@ services:
       - ./src/shared:/shared
     depends_on:
       - ingest-service
-      - mosquitto
 
+  auth-db:
+      image: postgres:18
+      restart: unless-stopped
+      ports:
+        - "5436:5432"
+      environment:
+          POSTGRES_USER: ${AUTH_DB_USER}
+          POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+          POSTGRES_DB: ${AUTH_DB_NAME}
+      volumes:
+        - auth_db_data_dev:/var/lib/postgresql
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+  auth-service:
+    build:
+      context: .
+      dockerfile: infra/dev/auth-service.Dockerfile
+    ports:
+      - "8083:8080"
+    env_file:
+      - "./src/auth-service/.env"
+    volumes:
+      - ./src/auth-service:/app
+      - ./src/shared:/shared
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  
 volumes:
   ingest_db_data_dev:
   twin_db_data_dev:
   rules_db_data_dev:
   identity_db_data_dev:
+  auth_db_data_dev:
