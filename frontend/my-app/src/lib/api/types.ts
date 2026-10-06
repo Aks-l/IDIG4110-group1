@@ -18,6 +18,19 @@ export type AutomationDraft = {
   actionTarget: string;
 };
 
+export type OverviewData = {
+  stats: { label: string; value: string }[];
+  devices: { connected: number; warning: number; events: number };
+};
+
+export type EnergyRange = 'Today' | 'Week' | 'Month' | 'Year';
+
+export type EnergyData = {
+  labels: string[];
+  values: number[];
+  total: string;
+};
+
 export type RoomMetric = {
   value: number;
   change: number;

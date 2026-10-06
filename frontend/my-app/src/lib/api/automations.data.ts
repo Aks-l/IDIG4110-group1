@@ -1,4 +1,4 @@
-import { getAutomations, createAutomation as apiCreateAutomation } from './api-automations';
+import { getAutomations, createAutomation as apiCreateAutomation, setAutomationState as apiSetAutomationState } from './api-automations';
 import { dataSource } from './data-source';
 import { mockAutomations } from './mock-data';
 import type { Automation, AutomationDraft } from './types';
@@ -22,4 +22,20 @@ export function createAutomation(draft: AutomationDraft): Promise<Automation> {
     });
   }
   return apiCreateAutomation(draft);
+}
+
+export function setAutomationState(automationId: string, enabled: boolean): Promise<Automation> {
+  if (dataSource === 'api') return apiSetAutomationState(automationId, enabled);
+
+  const automation = mockAutomations.find((candidate) => candidate.id === automationId);
+  return Promise.resolve({
+    ...(automation ?? {
+      id: automationId,
+      name: 'Automation',
+      description: '',
+      category: 'Comfort' as const,
+      runCount: 0,
+    }),
+    enabled,
+  });
 }

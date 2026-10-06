@@ -4,6 +4,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
+import { Toggle } from '@/components/Toggle';
+import { loadDevices, setDeviceState } from '@/lib/api/devices.data';
 import { loadRooms } from '@/lib/api/rooms.data';
 import type { Device, RoomData } from '@/lib/api/types';
 
@@ -23,17 +25,6 @@ function isWarningDevice(device: Device) {
   return device.type === 'Sensor' && /smoke|leak/i.test(device.name);
 }
 
-function flattenDevices(rooms: RoomData[]): DeviceWithRoom[] {
-  return rooms.flatMap((room) =>
-    room.devices.map((device) => ({
-      ...device,
-      id: `${room.id}-${device.id}`,
-      room: room.name,
-      warning: isWarningDevice(device),
-    })),
-  );
-}
-
 export default function DevicePage() {
   const [devices, setDevices] = useState<DeviceWithRoom[]>([]);
   const [search, setSearch] = useState('');
@@ -43,8 +34,15 @@ export default function DevicePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRooms()
-      .then((loadedRooms) => setDevices(flattenDevices(loadedRooms)))
+    Promise.all([loadDevices(), loadRooms()])
+      .then(([loadedDevices, loadedRooms]) => {
+        const roomNames = new Map(loadedRooms.map((loadedRoom) => [loadedRoom.id, loadedRoom.name]));
+        setDevices(loadedDevices.map((device) => ({
+          ...device,
+          room: roomNames.get(device.roomId ?? '') ?? 'Unassigned',
+          warning: isWarningDevice(device),
+        })));
+      })
       .catch(() => setError('Unable to load devices'));
   }, []);
 
@@ -52,6 +50,19 @@ export default function DevicePage() {
   const rooms = useMemo(() => [...new Set(devices.map((device) => device.room))].sort(), [devices]);
   const onlineCount = devices.filter((device) => device.on).length;
   const warningCount = devices.filter((device) => device.warning).length;
+
+  const handleToggle = async (deviceId: string, on: boolean) => {
+    const previous = devices.find((device) => device.id === deviceId)?.on;
+    setDevices((current) => current.map((device) => device.id === deviceId ? { ...device, on } : device));
+
+    try {
+      await setDeviceState(deviceId, on);
+    } catch {
+      if (previous !== undefined) {
+        setDevices((current) => current.map((device) => device.id === deviceId ? { ...device, on: previous } : device));
+      }
+    }
+  };
 
   const filteredDevices = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -130,6 +141,11 @@ export default function DevicePage() {
                 <span className={`hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex ${device.warning ? 'bg-[#fff4d9] text-[#956b13]' : device.on ? 'bg-[#e5f2e9] text-[#1f6f5b]' : 'bg-[#eef1ee] text-[#68766d]'}`}>
                   {device.warning ? 'Warning' : device.on ? 'On' : 'Off'}
                 </span>
+                <Toggle
+                  checked={device.on}
+                  onChange={(on) => handleToggle(device.id, on)}
+                  label={`${device.on ? 'Turn off' : 'Turn on'} ${device.name}`}
+                />
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${device.warning ? 'bg-[#e5a93d]' : device.on ? 'bg-[#39a56f] shadow-[0_0_0_4px_#dff1e6]' : 'bg-[#a8b4ab]'}`} title={device.warning ? 'Warning' : device.on ? 'Online' : 'Offline'} />
               </li>
             ))}

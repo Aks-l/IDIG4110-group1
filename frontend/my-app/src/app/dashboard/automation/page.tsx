@@ -5,7 +5,7 @@ import { InfoBox } from '@/components/InfoBox';
 import { Toggle } from '@/components/Toggle';
 import { Modal } from '@/components/Modal';
 import { AutomationForm } from '@/components/automations/AutomationForm';
-import { loadAutomations, createAutomation } from '@/lib/api/automations.data';
+import { loadAutomations, createAutomation, setAutomationState } from '@/lib/api/automations.data';
 import type { Automation, AutomationDraft } from '@/lib/api/types';
 
 // --- Helper ---
@@ -38,10 +38,18 @@ export default function AutomationsPage() {
       .catch(() => setError('Unable to load automations'));
   }, []);
 
-  const toggle = (id: string) =>
-    setAutomations((list) =>
-      list.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a))
-    );
+  const toggle = async (id: string) => {
+    const current = automations.find((automation) => automation.id === id);
+    if (!current) return;
+    const enabled = !current.enabled;
+    setAutomations((list) => list.map((automation) => automation.id === id ? { ...automation, enabled } : automation));
+    try {
+      const updated = await setAutomationState(id, enabled);
+      setAutomations((list) => list.map((automation) => automation.id === id ? updated : automation));
+    } catch {
+      setAutomations((list) => list.map((automation) => automation.id === id ? { ...automation, enabled: current.enabled } : automation));
+    }
+  };
 
   const handleCreate = async (draft: AutomationDraft) => {
     const created = await createAutomation(draft);

@@ -7,8 +7,7 @@ import { SidePanel } from '@/components/three/SidePanel';
 import { loadDevices } from '@/lib/api/devices.data';
 import { loadRoomLayout } from '@/lib/api/three-d.data';
 import { loadRooms } from '@/lib/api/rooms.data';
-import { dataSource } from '@/lib/api/data-source';
-import { setDeviceState } from '@/lib/api/api-devices';
+import { setDeviceState } from '@/lib/api/devices.data';
 import type { Device, RoomData, RoomLayout } from '@/lib/api/types';
 
 const Scene = dynamic(() => import('@/components/three/Scene'), {
@@ -58,8 +57,6 @@ export default function ThreeDModelPage() {
   const handleToggleDevice = async (deviceId: string, on: boolean) => {
     const previous = devices.find((device) => device.id === deviceId)?.on;
     setDevices((current) => current.map((device) => device.id === deviceId ? { ...device, on } : device));
-
-    if (dataSource !== 'api') return;
 
     try {
       await setDeviceState(deviceId, on);

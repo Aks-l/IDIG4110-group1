@@ -1,35 +1,7 @@
-// Data formats for the stats and devices
-type Stat = {
-  label: string;
-  value: string;
-};
-
-type DeviceSummary = {
-  connected: number;
-  warning: number;
-  events: number;
-};
-
-async function getStats(): Promise<Stat[]> {
-  return [
-    { label: 'Temperature', value: '23°C' },
-    { label: 'Humidity',    value: '48%' },
-    { label: 'Energy',      value: '1.2 kW' },
-    { label: 'Air Quality', value: 'Good' },
-    { label: 'Occupancy',   value: '3 people' },
-  ];
-}
-
-async function getDevices(): Promise<DeviceSummary> {
-  return {
-    connected: 24,
-    warning: 3,
-    events: 7,
-  };
-}
+import { loadOverview } from '@/lib/api/overview.data';
 
 export default async function OverviewPage() {
-  const [stats, devices] = await Promise.all([getStats(), getDevices()]);
+  const { stats, devices } = await loadOverview();
 
   const deviceStats = [
     { label: 'Connected', value: devices.connected },

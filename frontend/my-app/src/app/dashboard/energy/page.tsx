@@ -1,33 +1,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
-
-type EnergyRange = 'Today' | 'Week' | 'Month' | 'Year';
-
-const rangeData: Record<EnergyRange, { labels: string[]; values: number[]; total: string }> = {
-  Today: {
-    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'Now'],
-    values: [0.42, 0.28, 0.75, 1.16, 1.42, 1.08, 1.2],
-    total: '8.4 kWh',
-  },
-  Week: {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    values: [11.2, 13.8, 12.6, 15.1, 14.3, 9.6, 8.4],
-    total: '85.0 kWh',
-  },
-  Month: {
-    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    values: [82, 91, 76, 85],
-    total: '334 kWh',
-  },
-  Year: {
-    labels: ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
-    values: [310, 284, 342, 296, 334, 318],
-    total: '3,684 kWh',
-  },
-};
+import { loadEnergy } from '@/lib/api/energy.data';
+import type { EnergyData, EnergyRange } from '@/lib/api/types';
 
 const rooms = [
   { name: 'Kitchen', value: '420 W', share: 42 },
@@ -42,8 +19,8 @@ const consumers = [
   { name: 'Heat pump', value: '1.4 kWh', note: 'Living room' },
 ];
 
-function ConsumptionChart({ range }: { range: EnergyRange }) {
-  const { labels, values } = rangeData[range];
+function ConsumptionChart({ range, data }: { range: EnergyRange; data: EnergyData }) {
+  const { labels, values } = data;
   const width = 760;
   const height = 250;
   const chartTop = 24;
@@ -99,7 +76,18 @@ function ConsumptionChart({ range }: { range: EnergyRange }) {
 
 export default function EnergyPage() {
   const [range, setRange] = useState<EnergyRange>('Today');
-  const rangeInfo = rangeData[range];
+  const [rangeInfo, setRangeInfo] = useState<EnergyData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRangeInfo(null);
+    loadEnergy(range)
+      .then(setRangeInfo)
+      .catch(() => setError('Unable to load energy data'));
+  }, [range]);
+
+  if (error) return <p className="text-red-600">{error}</p>;
+  if (!rangeInfo) return <div className="panel p-6 text-sm text-[#68766d]">Loading energy data...</div>;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -123,7 +111,7 @@ export default function EnergyPage() {
             <p className="text-xs text-[#68766d]">Compare your consumption across different periods.</p>
           </div>
           <div className="flex rounded-xl border border-[#dbe4dc] bg-white p-1 shadow-sm" role="group" aria-label="Energy range">
-            {(Object.keys(rangeData) as EnergyRange[]).map((option) => (
+            {(['Today', 'Week', 'Month', 'Year'] as EnergyRange[]).map((option) => (
               <button
                 key={option}
                 type="button"
@@ -136,7 +124,7 @@ export default function EnergyPage() {
             ))}
           </div>
         </div>
-        <ConsumptionChart range={range} />
+        <ConsumptionChart range={range} data={rangeInfo} />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

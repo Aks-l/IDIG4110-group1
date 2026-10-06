@@ -1,4 +1,4 @@
-import { getDevices } from './api-devices';
+import { getDevices, setDeviceState as apiSetDeviceState } from './api-devices';
 import { dataSource } from './data-source';
 import { mockRooms } from './mock-data';
 import type { Device } from './types';
@@ -33,4 +33,18 @@ export function loadDevices(): Promise<Device[]> {
       }),
     ),
   );
+}
+
+export function setDeviceState(deviceId: string, on: boolean): Promise<Device> {
+  if (dataSource === 'api') return apiSetDeviceState(deviceId, on);
+
+  const device = Object.values(mockRooms)
+    .flatMap((room) => room.devices)
+    .find((candidate) => candidate.id === deviceId || `${candidate.id}` === deviceId);
+
+  return Promise.resolve({
+    ...(device ?? { id: deviceId, name: 'Device', type: 'Unknown', on }),
+    id: deviceId,
+    on,
+  });
 }

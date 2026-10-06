@@ -26,12 +26,18 @@ frontend/my-app/src/lib/api/
 ├── api-devices.ts      Device endpoints
 ├── api-events.ts       Event endpoints
 ├── api-automations.ts  Automation endpoints
+├── api-overview.ts     Overview endpoints
+├── api-energy.ts       Energy endpoints
 ├── types.ts            Shared response types
 ├── mock-data.ts        Centralized development fixtures
 ├── data-source.ts      Mock/API source selection
 ├── rooms.data.ts       Room data-source adapter
 ├── events.data.ts      Event data-source adapter
-└── automations.data.ts Automation data-source adapter
+├── automations.data.ts Automation data-source adapter
+├── devices.data.ts     Device data-source adapter and mutations
+├── three-d.data.ts     3D layout data-source adapter
+├── overview.data.ts    Overview data-source adapter
+└── energy.data.ts      Energy data-source adapter
 ```
 
 ## Configuration
@@ -104,6 +110,14 @@ The device update currently sends:
 }
 ```
 
+### Overview
+
+Implemented in `api-overview.ts`:
+
+| Method | Path | Response |
+| --- | --- | --- |
+| `GET` | `/overview` | `OverviewData` |
+
 ### Events
 
 Implemented in `api-events.ts`:
@@ -111,6 +125,14 @@ Implemented in `api-events.ts`:
 | Method | Path | Response |
 | --- | --- | --- |
 | `GET` | `/events` | `Event[]` |
+
+### Energy
+
+Implemented in `api-energy.ts`:
+
+| Method | Path | Response |
+| --- | --- | --- |
+| `GET` | `/energy?range=:range` | `EnergyData` |
 
 ### Automations
 
@@ -200,6 +222,10 @@ The current adapters are:
 | `rooms.data.ts` | Rooms and individual room details |
 | `events.data.ts` | Events |
 | `automations.data.ts` | Automations |
+| `devices.data.ts` | Devices and device mutations |
+| `three-d.data.ts` | 3D room layout |
+| `overview.data.ts` | Overview dashboard data |
+| `energy.data.ts` | Energy range data |
 
 Devices currently have endpoint functions but no separate data adapter. Add a
 `devices.data.ts` adapter when devices also need mock/API switching or local
