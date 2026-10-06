@@ -2,6 +2,30 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Run with Docker Compose
+
+From this directory, build and start the frontend with:
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). The default Compose setup
+uses mock data. To connect to a backend, create a `.env` file in this directory:
+
+```env
+NEXT_PUBLIC_DATA_SOURCE=api
+NEXT_PUBLIC_API_URL=http://host.docker.internal:8080/api
+```
+
+Then rebuild the image:
+
+```bash
+docker compose up --build
+```
+
+Stop the container with `docker compose down`.
+
 First, run the development server:
 
 ```bash
