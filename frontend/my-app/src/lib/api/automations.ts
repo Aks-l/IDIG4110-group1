@@ -1,4 +1,4 @@
-import { apiClient } from './api-client';
+import { apiClient } from './client';
 import type { Automation , AutomationDraft} from './types';
 
 export function getAutomations() {

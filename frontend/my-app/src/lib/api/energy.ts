@@ -1,4 +1,4 @@
-import { apiClient } from './api-client';
+import { apiClient } from './client';
 import type { EnergyData, EnergyRange } from './types';
 
 export function getEnergy(range: EnergyRange) {

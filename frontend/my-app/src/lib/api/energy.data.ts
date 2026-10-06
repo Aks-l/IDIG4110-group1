@@ -1,4 +1,4 @@
-import { getEnergy } from './api-energy';
+import { getEnergy } from './energy';
 import { dataSource } from './data-source';
 import type { EnergyData, EnergyRange } from './types';
 

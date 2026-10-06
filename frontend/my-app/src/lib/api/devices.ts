@@ -1,4 +1,4 @@
-import { apiClient } from './api-client';
+import { apiClient } from './client';
 import type { Device } from './types';
 
 export function getDevices() {

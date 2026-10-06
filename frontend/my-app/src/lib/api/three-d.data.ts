@@ -1,4 +1,4 @@
-import { getRoomLayout } from './api-3d';
+import { getRoomLayout } from './3d-model';
 import { dataSource } from './data-source';
 import type { RoomLayout } from './types';
 

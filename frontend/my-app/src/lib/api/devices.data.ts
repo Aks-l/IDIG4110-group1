@@ -1,4 +1,4 @@
-import { getDevices, setDeviceState as apiSetDeviceState } from './api-devices';
+import { getDevices, setDeviceState as apiSetDeviceState } from './devices';
 import { dataSource } from './data-source';
 import { mockRooms } from './mock-data';
 import type { Device } from './types';

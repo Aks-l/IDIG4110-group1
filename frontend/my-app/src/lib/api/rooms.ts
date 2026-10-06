@@ -1,4 +1,4 @@
-import { apiClient } from './api-client';
+import { apiClient } from './client';
 import type { RoomData } from './types';
 
 export function getRooms() {

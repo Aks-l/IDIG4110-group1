@@ -1,4 +1,4 @@
-import { getOverview } from './api-overview';
+import { getOverview } from './overview';
 import { dataSource } from './data-source';
 import type { OverviewData } from './types';
 

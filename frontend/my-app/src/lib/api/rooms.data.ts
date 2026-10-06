@@ -1,4 +1,4 @@
-import { getRoom, getRooms } from './api-rooms';
+import { getRoom, getRooms } from './rooms';
 import { dataSource } from './data-source';
 import { mockRooms } from './mock-data';
 import type { RoomData } from './types';

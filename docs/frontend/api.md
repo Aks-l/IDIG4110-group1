@@ -21,13 +21,13 @@ updated together with the backend documentation when that contract exists.
 
 ```text
 frontend/my-app/src/lib/api/
-├── api-client.ts       Shared HTTP client and error handling
-├── api-rooms.ts        Room endpoints
-├── api-devices.ts      Device endpoints
-├── api-events.ts       Event endpoints
-├── api-automations.ts  Automation endpoints
-├── api-overview.ts     Overview endpoints
-├── api-energy.ts       Energy endpoints
+├── client.ts       Shared HTTP client and error handling
+├── rooms.ts        Room endpoints
+├── devices.ts      Device endpoints
+├── events.ts       Event endpoints
+├── automations.ts  Automation endpoints
+├── overview.ts     Overview endpoints
+├── energy.ts       Energy endpoints
 ├── types.ts            Shared response types
 ├── mock-data.ts        Centralized development fixtures
 ├── data-source.ts      Mock/API source selection
@@ -62,7 +62,7 @@ client-side use. Restart the Next.js development server after changing variables
 
 ## Shared Client
 
-`api-client.ts` is responsible for transport concerns only:
+`client.ts` is responsible for transport concerns only:
 
 - Prefixing endpoints with `NEXT_PUBLIC_API_URL`
 - Sending JSON request and response headers
@@ -73,7 +73,7 @@ client-side use. Restart the Next.js development server after changing variables
 Feature modules should use this wrapper instead of calling `fetch` directly.
 
 ```ts
-import { apiClient } from '@/lib/api/api-client';
+import { apiClient } from '@/lib/api/client';
 import type { Event } from '@/lib/api/types';
 
 const events = await apiClient<Event[]>('/events');
@@ -85,7 +85,7 @@ All paths below are relative to `NEXT_PUBLIC_API_URL`.
 
 ### Rooms
 
-Implemented in `api-rooms.ts`:
+Implemented in `rooms.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -94,7 +94,7 @@ Implemented in `api-rooms.ts`:
 
 ### Devices
 
-Implemented in `api-devices.ts`:
+Implemented in `devices.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -112,7 +112,7 @@ The device update currently sends:
 
 ### Overview
 
-Implemented in `api-overview.ts`:
+Implemented in `overview.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -120,7 +120,7 @@ Implemented in `api-overview.ts`:
 
 ### Events
 
-Implemented in `api-events.ts`:
+Implemented in `events.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -128,7 +128,7 @@ Implemented in `api-events.ts`:
 
 ### Energy
 
-Implemented in `api-energy.ts`:
+Implemented in `energy.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -136,7 +136,7 @@ Implemented in `api-energy.ts`:
 
 ### Automations
 
-Implemented in `api-automations.ts`:
+Implemented in `automations.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
@@ -233,7 +233,7 @@ fallback behavior.
 
 ## Error Handling
 
-`ApiError` is defined and exported from `src/lib/api/api-client.ts`:
+`ApiError` is defined and exported from `src/lib/api/client.ts`:
 
 ```ts
 export class ApiError extends Error {
@@ -253,7 +253,7 @@ also throw `ApiError`, but with `status: 0` because no HTTP response was
 received.
 
 ```ts
-import { ApiError } from '@/lib/api/api-client';
+import { ApiError } from '@/lib/api/client';
 
 try {
 	const devices = await getDevices();

@@ -1,4 +1,4 @@
-import { getAutomations, createAutomation as apiCreateAutomation, setAutomationState as apiSetAutomationState } from './api-automations';
+import { getAutomations, createAutomation as apiCreateAutomation, setAutomationState as apiSetAutomationState } from './automations';
 import { dataSource } from './data-source';
 import { mockAutomations } from './mock-data';
 import type { Automation, AutomationDraft } from './types';
