@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/shared/dto"
@@ -12,6 +13,14 @@ const (
 	insertSensorDataQuery = `
 		INSERT INTO ingest.sensor_data (entityID, event_type, time_fired)
 		VALUES ($1, $2, $3)
+	`
+	findSensorDataByID = `
+		SELECT entityID, event_type, time_fired
+		FROM ingest.sensor_data
+		WHERE entity_id = $1
+			AND time_fired >= $2
+			AND time_fired <= $3
+		ORDER BY time_fired ASC
 	`
 )
 
@@ -40,4 +49,30 @@ func (r *SensorIngestRepoImpl) Insert(ctx context.Context, sensorData dto.Sensor
 		return fmt.Errorf("error inserting sensor data")
 	}
 	return nil
+}
+
+func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId string, from, to time.Time) ([]dto.SensorStateEvent, error) {
+	rows, err := r.db.Conn.Query(ctx, findSensorDataByID, entityId, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("find time by range: %w", err)
+	}
+	defer rows.Close()
+
+	sensorStates := []dto.SensorStateEvent{}
+
+	for rows.Next() {
+		var data dto.SensorStateEvent
+
+		if err := rows.Scan(&data.EntityID, &data.EventType, &data.TimeFired); err != nil {
+			return nil, fmt.Errorf("scan sensor data: %w", err)
+		}
+
+		sensorStates = append(sensorStates, data)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error %w", err)
+	}
+
+	return sensorStates, nil
 }
