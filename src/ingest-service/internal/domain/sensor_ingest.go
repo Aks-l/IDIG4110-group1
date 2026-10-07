@@ -12,11 +12,11 @@ import (
 
 type SensorIngestRepo interface {
 	Insert(ctx context.Context, sensorData dto.SensorStateEvent) error
-	FindByTimeRange(ctx context.Context, entityId string, from, to time.Time) ([]dto.SensorStateEvent, error)
+	FindByTimeRange(ctx context.Context, entityId string, from, to *time.Time) ([]dto.SensorStateEvent, error)
 }
 
 type SensorIngestSvc interface {
 	Create(ctx context.Context, payload dto.SensorStateEvent) error
-	GetSensorData(ctx context.Context, entityId string, from, to time.Time) ([]dto.SensorStateEvent, error)
+	GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.SensorStateEvent, error)
 }
 

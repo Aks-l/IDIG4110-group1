@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -17,26 +16,29 @@ func GetSensorDataByTimeRange(svc domain.SensorIngestSvc) http.HandlerFunc {
 		entityId := q.Get("entity_id")
 
 		fromStr := q.Get("from")
-		if fromStr == "" {
-			httperror.HandleError(w, http.StatusInternalServerError, fmt.Errorf(httperror.ErrBadRequest), httperror.ErrBadRequest)
-			return
+		var from *time.Time = nil
+		var parsedFrom time.Time
+		if fromStr != "" {
+			var err error
+			parsedFrom, err = time.Parse(time.RFC3339, fromStr)
+			if err != nil {
+				httperror.HandleError(w, http.StatusBadRequest, err, "from must be a valid RFC3339 timestamp")
+				return
+			}
+			from = &parsedFrom
 		}
 
 		toStr := q.Get("to")
-		if toStr == "" {
-			httperror.HandleError(w, http.StatusInternalServerError, fmt.Errorf(httperror.ErrBadRequest), httperror.ErrBadRequest)
-			return
-		}
-		from, err := time.Parse(time.RFC3339, fromStr)
-		if err != nil {
-			httperror.HandleError(w, http.StatusBadRequest, err, "from must be a valid RFC3339 timestamp")
-			return
-		}
-
-		to, err := time.Parse(time.RFC3339, toStr)
-		if err != nil {
-			httperror.HandleError(w, http.StatusBadRequest, err, "to must be a valid RFC3339 timestamp")
-			return
+		var to *time.Time = nil
+		var parsedTo time.Time
+		if toStr != "" {
+			var err error
+			parsedTo, err = time.Parse(time.RFC3339, toStr)
+			if err != nil {
+				httperror.HandleError(w, http.StatusBadRequest, err, "to must be a valid RFC3339 timestamp")
+				return
+			}
+			to = &parsedTo
 		}
 
 		sensorData, err := svc.GetSensorData(r.Context(), entityId, from, to)

@@ -27,7 +27,7 @@ func (s *SensorIngestSvcImpl) Create(ctx context.Context, payload dto.SensorStat
 	return nil
 }
 
-func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to time.Time) ([]dto.SensorStateEvent, error) {
+func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.SensorStateEvent, error) {
 	data, err := s.repo.FindByTimeRange(ctx, entityId, from, to)
 	if err != nil {
 		return nil, err

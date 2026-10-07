@@ -17,9 +17,9 @@ const (
 	findSensorDataByID = `
 		SELECT entityID, event_type, time_fired
 		FROM ingest.sensor_data
-		WHERE entity_id = $1
-			AND time_fired >= $2
-			AND time_fired <= $3
+		WHERE entityID = $1
+			AND ($2::timestamptz IS NULL OR time_fired >= $2::timestamptz)
+			AND ($3::timestamptz IS NULL OR time_fired <= $3::timestamptz)
 		ORDER BY time_fired ASC
 	`
 )
@@ -51,7 +51,7 @@ func (r *SensorIngestRepoImpl) Insert(ctx context.Context, sensorData dto.Sensor
 	return nil
 }
 
-func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId string, from, to time.Time) ([]dto.SensorStateEvent, error) {
+func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId string, from, to *time.Time) ([]dto.SensorStateEvent, error) {
 	rows, err := r.db.Conn.Query(ctx, findSensorDataByID, entityId, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("find time by range: %w", err)
