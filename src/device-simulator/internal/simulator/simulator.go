@@ -41,11 +41,23 @@ func (s *Simulator) run(id string) {
 		mock := GenerateMockData(id)
 		payload, err := json.Marshal(mock)
 		if err != nil {
-			slog.Error("JSON marshal failed", "error", err)
+			slog.Error("JSON marshal failed",
+				"devicedID", id,
+				"error", err,
+			)
+			continue
 		}
 
 		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")
-		s.broker.Publish(topic, s.qos, payload)
+
+		if err := s.broker.Publish(topic, s.qos, payload); err != nil {
+			slog.Error(
+				"failed to publish message",
+				"deviceId", id,
+				"topic", topic,
+				"error", err,
+			)
+		}
 
 		time.Sleep(time.Duration(s.interval) * time.Second)
 	}
