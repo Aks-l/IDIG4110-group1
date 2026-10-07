@@ -19,8 +19,7 @@ func Encode[T any](w http.ResponseWriter, code int, v T) error {
 	return nil
 }
 
-func Decode[T any](r *http.Request) error {
-	var data T
+func Decode[T any](r *http.Request, data *T) error {
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return fmt.Errorf("error: decoding json: %w", err)
 	}
