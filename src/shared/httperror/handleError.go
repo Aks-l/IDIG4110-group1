@@ -12,19 +12,19 @@ type ErrorMessage struct {
 }
 
 func HandleError(w http.ResponseWriter, code int, err error, msg string) {
-	if err != nil {
+	if err == nil {
 		slog.Warn("HandleError called with no error", "message", msg)
 		return
 	}
 
-	slog.Error("request error","code", code, "err", err, "message", msg)
+	slog.Error("request error", "code", code, "err", err, "message", msg)
 
-	resp := ErrorMessage {
+	resp := ErrorMessage{
 		Code: code,
 		Message: msg,
 	}
 
-	if errEncode := jsonutils.Encode(w, code, resp); err != nil {
+	if errEncode := jsonutils.Encode(w, code, resp); errEncode != nil {
 		slog.Error("failed to write error response", "error", errEncode)
 	}
 }
