@@ -14,7 +14,8 @@ CREATE TABLE areas (
     floor      int,
     area_type  varchar(50),
     geometry   jsonb,
-    created_at timestamptz NOT NULL DEFAULT now()
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX areas_home_idx ON areas (home_id);
