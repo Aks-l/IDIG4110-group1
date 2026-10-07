@@ -4,16 +4,9 @@ import { useEffect, useState } from 'react';
 import { RoomView, SubNav } from '@/components/SubNav';
 import { InfoBox } from '@/components/InfoBox';
 import { loadRoom, loadRooms } from '@/lib/api/rooms.data';
+import { formatTime } from '@/lib/format';
 import type { RoomData } from '@/lib/api/types';
 
-// --- Helper ---
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 // --- Page ---
 
@@ -49,11 +42,11 @@ export default function RoomsPage() {
   if (!data) return <p>Loading room data...</p>;
 
   const deviceList = (
-    <section className="panel p-4">
+    <section className="panel flex max-h-[420px] flex-col p-4">
       <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
         Devices
       </h2>
-      <ul className="space-y-2">
+      <ul className="flex-1 space-y-2 overflow-y-auto pr-1">
         {data.devices.map((d) => (
           <li
             key={d.id}
@@ -77,11 +70,11 @@ export default function RoomsPage() {
   );
 
   const activityList = (
-    <section className="panel p-4">
+    <section className="panel flex max-h-[420px] flex-col p-4">
       <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500">
         Recent Activity
       </h2>
-      <ul className="space-y-2">
+      <ul className="flex-1 space-y-2 overflow-y-auto pr-1">
         {data.activity.map((a) => (
           <li
             key={a.id}

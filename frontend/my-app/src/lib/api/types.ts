@@ -114,6 +114,6 @@ export type Event = {
   id: string;
   timestamp: string;
   title: string;
-  location: string;
+  location?: string;
   severity: Severity;
 };
