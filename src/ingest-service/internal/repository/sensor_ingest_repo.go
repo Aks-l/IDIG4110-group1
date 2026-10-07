@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,17 +11,24 @@ import (
 )
 
 const (
-	insertSensorDataQuery = `
-		INSERT INTO ingest.sensor_data (entityID, event_type, time_fired)
-		VALUES ($1, $2, $3)
+	insertReadingQuery = `
+		INSERT INTO ingest.readings (
+			time, gateway_id, external_entity_id, device_class,
+			value_num, value_text, unit, attributes
+		)
+		VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8)
 	`
-	findSensorDataByID = `
-		SELECT entityID, event_type, time_fired
-		FROM ingest.sensor_data
-		WHERE entityID = $1
-			AND ($2::timestamptz IS NULL OR time_fired >= $2::timestamptz)
-			AND ($3::timestamptz IS NULL OR time_fired <= $3::timestamptz)
-		ORDER BY time_fired ASC
+	insertRawMessageQuery = `
+		INSERT INTO ingest.raw_messages (time, gateway_id, topic, payload)
+		VALUES ($1, $2::uuid, $3, $4)
+	`
+	findReadingsByTimeRange = `
+		SELECT time, gateway_id, external_entity_id, device_class, value_num, value_text, unit
+		FROM ingest.readings
+		WHERE external_entity_id = $1
+			AND ($2::timestamptz IS NULL OR time >= $2::timestamptz)
+			AND ($3::timestamptz IS NULL OR time <= $3::timestamptz)
+		ORDER BY time ASC
 	`
 )
 
@@ -34,45 +42,92 @@ func NewSensorIngestRepoImpl(db *db.Database) *SensorIngestRepoImpl {
 	}
 }
 
-func (r *SensorIngestRepoImpl) Insert(ctx context.Context, sensorData dto.SensorStateEvent) error {
+func (r *SensorIngestRepoImpl) InsertReading(ctx context.Context, reading dto.Reading) error {
+	attributes, err := marshalAttributes(reading.Attributes)
+	if err != nil {
+		return err
+	}
+
 	tag, err := r.db.Conn.Exec(
 		ctx,
-		insertSensorDataQuery,
-		sensorData.EntityID,
-		sensorData.EventType,
-		sensorData.TimeFired,
+		insertReadingQuery,
+		reading.Time,
+		reading.GatewayID,
+		reading.ExternalEntityID,
+		reading.DeviceClass,
+		reading.ValueNum,
+		reading.ValueText,
+		reading.Unit,
+		attributes,
 	)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("error inserting sensor data")
+		return fmt.Errorf("error inserting reading")
 	}
 	return nil
 }
 
-func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId string, from, to *time.Time) ([]dto.SensorStateEvent, error) {
-	rows, err := r.db.Conn.Query(ctx, findSensorDataByID, entityId, from, to)
+func (r *SensorIngestRepoImpl) InsertRawMessage(ctx context.Context, at time.Time, gatewayID, topic string, payload []byte) error {
+	tag, err := r.db.Conn.Exec(
+		ctx,
+		insertRawMessageQuery,
+		at,
+		gatewayID,
+		topic,
+		payload,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("find time by range: %w", err)
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("error inserting raw message")
+	}
+	return nil
+}
+
+func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {
+	rows, err := r.db.Conn.Query(ctx, findReadingsByTimeRange, entityId, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("find readings by time range: %w", err)
 	}
 	defer rows.Close()
 
-	sensorStates := []dto.SensorStateEvent{}
+	readings := []dto.Reading{}
 
 	for rows.Next() {
-		var data dto.SensorStateEvent
+		var reading dto.Reading
 
-		if err := rows.Scan(&data.EntityID, &data.EventType, &data.TimeFired); err != nil {
-			return nil, fmt.Errorf("scan sensor data: %w", err)
+		if err := rows.Scan(
+			&reading.Time,
+			&reading.GatewayID,
+			&reading.ExternalEntityID,
+			&reading.DeviceClass,
+			&reading.ValueNum,
+			&reading.ValueText,
+			&reading.Unit,
+		); err != nil {
+			return nil, fmt.Errorf("scan reading: %w", err)
 		}
 
-		sensorStates = append(sensorStates, data)
+		readings = append(readings, reading)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error %w", err)
+		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
-	return sensorStates, nil
+	return readings, nil
+}
+
+func marshalAttributes(attributes map[string]any) ([]byte, error) {
+	if attributes == nil {
+		return nil, nil
+	}
+	data, err := json.Marshal(attributes)
+	if err != nil {
+		return nil, fmt.Errorf("marshal attributes: %w", err)
+	}
+	return data, nil
 }

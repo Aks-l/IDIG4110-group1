@@ -15,6 +15,7 @@ type Simulator struct {
 	interval    int
 	topic       string
 	deviceCount int
+	gatewayID   string
 	qos         byte
 }
 
@@ -24,22 +25,25 @@ func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
 		interval:    cfg.Interval,
 		topic:       cfg.Topic,
 		deviceCount: cfg.DeviceCount,
+		gatewayID:   cfg.GatewayID,
 		qos:         byte(0),
 	}
 }
 
 func (s *Simulator) Start() {
 	for i := 0; i < s.deviceCount; i++ {
-		eventId := fmt.Sprintf("b%015d", i+1)
-		go s.run(eventId)
+		entityID := fmt.Sprintf("b%015d", i+1)
+		go s.run(entityID)
 	}
 	select {}
 }
 
 func (s *Simulator) run(id string) {
+	temperature := 20.0
 	for {
-		mock := GenerateMockData(id)
-		payload, err := json.Marshal(mock)
+		temperature = NextTemperature(temperature)
+		reading := GenerateMockData(id, s.gatewayID, temperature)
+		payload, err := json.Marshal(reading)
 		if err != nil {
 			slog.Error("JSON marshal failed", "error", err)
 		}
