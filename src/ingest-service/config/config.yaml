@@ -1,0 +1,31 @@
+server:
+  port: 8080
+  readTimout: 10
+  writeTimout: 10
+  idleTimout: 30
+  maxHeaderBytes: 1048576
+
+database:
+  host: "ingest-db"
+  port: 5432
+  user: "ingest"
+  name: "ingest_db"
+  password: "ingest"
+  ssl: "disable"
+
+mqtt:
+  url: "tcp://mosquitto:1883"
+  clientId: "ingest-service"
+  autoConnect: true
+  connectRetry: true
+  connectRetryInterval: 5
+  keepAlive: 30
+  pingTimeOut: 10
+  cleanSession: false
+  workerCount: 10
+  workerBufferSize: 1000
+  topic: "sensors/+/state"
+
+migration:
+  directory: "migrations"
+  

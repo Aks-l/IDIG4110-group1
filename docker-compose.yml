@@ -1,0 +1,112 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes: 
+      - ./infra/config/mosquitto/:/mosquitto/config/
+
+  # One Postgres container per service.
+
+  ingest-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ingest
+      POSTGRES_PASSWORD: ingest
+      POSTGRES_DB: ingest_db
+    volumes:
+      - ingest_db_data_dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ingest -d ingest_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  twin-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: twin
+      POSTGRES_PASSWORD: twin
+      POSTGRES_DB: twin_db
+    volumes:
+      - twin_db_data_dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twin -d twin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rules-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: rules
+      POSTGRES_PASSWORD: rules
+      POSTGRES_DB: rules_db
+    volumes:
+      - rules_db_data_dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rules -d rules_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  identity-db:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: identity
+      POSTGRES_PASSWORD: identity
+      POSTGRES_DB: identity_db
+    volumes:
+      - identity_db_data_dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ingest-service:
+    build:
+      context: .
+      dockerfile: infra/dev/ingest-service.Dockerfile
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./src/ingest-service:/app
+      - ./src/shared:/shared
+    depends_on:
+      ingest-db:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  device-simulator:
+    build:
+      context: .
+      dockerfile: infra/dev/device-simulator.Dockerfile
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./src/device-simulator:/app
+      - ./src/shared:/shared
+    depends_on:
+      - ingest-service
+      - mosquitto
+
+volumes:
+  ingest_db_data_dev:
+  twin_db_data_dev:
+  rules_db_data_dev:
+  identity_db_data_dev:

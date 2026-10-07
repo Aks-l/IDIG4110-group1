@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS home_members;
+DROP TABLE IF EXISTS users;
