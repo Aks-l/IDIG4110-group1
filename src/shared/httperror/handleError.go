@@ -12,7 +12,7 @@ type ErrorMessage struct {
 }
 
 func HandleError(w http.ResponseWriter, code int, err error, msg string) {
-	if err != nil {
+	if err == nil {
 		slog.Warn("HandleError called with no error", "message", msg)
 		return
 	}

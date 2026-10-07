@@ -1,9 +1,17 @@
 package server
 
-import "net/http"
+import (
+	"IDIG4110/ingest-service/internal/domain"
+	"IDIG4110/ingest-service/internal/handlers"
+	"net/http"
+)
 
-func NewRouter() http.Handler {
+func NewRouter(
+	svc domain.SensorIngestSvc,
+) http.Handler {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET " +SENSOR_DATA, handlers.GetSensorDataByTimeRange(svc))
 
 	return mux
 }
