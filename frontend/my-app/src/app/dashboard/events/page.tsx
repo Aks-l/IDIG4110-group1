@@ -137,7 +137,7 @@ function ProjectionRow({ projection }: { projection: Projection }) {
         {/* Recommended action — muted, inline */}
         {projection.recommendedAction && (
           <p className="text-xs text-[#68766d]">
-            <span className="text-[#1f6f5b]">→ </span>
+            <span className="text-[#1f6f5b]">Recommendation: </span>
             {projection.recommendedAction}
           </p>
         )}

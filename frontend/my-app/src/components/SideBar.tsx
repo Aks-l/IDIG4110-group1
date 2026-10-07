@@ -6,7 +6,7 @@ const menuItems = [
     { href: prefix + '/overview', label: 'Overview' },
     { href: prefix + '/rooms', label: 'Rooms' },
     { href: prefix + '/devices', label: 'Devices' },
-    { href: prefix + '/events', label: 'Events' },
+    { href: prefix + '/events', label: 'Events & Predictions' },
     { href: prefix + '/energy', label: 'Energy' },
     { href: prefix + '/automation', label: 'Automation' },
     { href: prefix + '/3d-model', label: '3D Model', icon: <Box size={16} strokeWidth={2} /> },
