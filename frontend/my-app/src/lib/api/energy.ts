@@ -1,6 +1,6 @@
 import { apiClient } from './client';
-import type { EnergyPageData, EnergyPeriod } from './types';
+import type { EnergyPageData, EnergyPeriod, EnergyMode } from './types';
 
-export function getEnergy(period: EnergyPeriod) {
-  return apiClient<EnergyPageData>(`/energy?period=${period}`);
+export function getEnergy(period: EnergyPeriod, mode: EnergyMode) {
+  return apiClient<EnergyPageData>(`/energy?period=${period}&mode=${mode}`);
 }

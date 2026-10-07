@@ -23,7 +23,13 @@ export type OverviewData = {
   devices: { connected: number; warning: number; events: number };
 };
 
-export type EnergyPeriod = 'today' | 'week' | 'month' | 'year';
+// ENERGY TYPES
+
+export const ENERGY_PERIODS = ['today', 'week', 'month', 'year'] as const;
+export type EnergyPeriod = (typeof ENERGY_PERIODS)[number];
+
+export const ENERGY_MODES = ['current', 'projected'] as const;
+export type EnergyMode = (typeof ENERGY_MODES)[number];
 
 export type EnergyGranularity = 'hour' | 'day' | 'month';
 
@@ -32,7 +38,7 @@ export type EnergySummary = {
   totalKwh: number;              // total consumption in the period
   estimatedCost: number;         // computed from totalKwh × tariff
   currency: string;              // 'NOK'
-  comparedToPrevious: number;    // -0.12 = 12% less than previous period
+  comparedToPrevious: number | null;    // -0.12 = 12% less than previous period
 };
 
 export type EnergyPoint = {
