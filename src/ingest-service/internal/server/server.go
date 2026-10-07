@@ -14,10 +14,10 @@ import (
 
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
-	"IDIG4110/shared/migrate"
 	"IDIG4110/ingest-service/internal/mqttclient"
 	"IDIG4110/ingest-service/internal/repository"
 	"IDIG4110/ingest-service/internal/service"
+	"IDIG4110/shared/migrate"
 )
 
 func Run() error {

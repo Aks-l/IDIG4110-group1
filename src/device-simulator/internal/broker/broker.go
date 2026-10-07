@@ -11,7 +11,7 @@ import (
 const disconnectTime = 250 // in millis
 
 type Broker struct {
-	client mqtt.Client 
+	client mqtt.Client
 }
 
 func Init(cfg config.MqttConfig) (*Broker, error) {
@@ -24,7 +24,7 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 		SetKeepAlive(time.Duration(cfg.KeepAlive) * time.Second).
 		SetPingTimeout(time.Duration(cfg.PingTimeout) * time.Second).
 		SetCleanSession(cfg.CleanSession)
-	
+
 	opts.OnConnect = func(c mqtt.Client) {
 		slog.Info("MQTT Connected")
 	}
@@ -44,9 +44,10 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 	}, nil
 }
 
-func (b *Broker) Publish(topic string, qos byte, payload []byte) {
-	token := b.client.Publish(topic,qos, false, payload)
+func (b *Broker) Publish(topic string, qos byte, payload []byte) error {
+	token := b.client.Publish(topic, qos, false, payload)
 	token.Wait()
+	return token.Error()
 }
 
 func (b *Broker) Close() {
