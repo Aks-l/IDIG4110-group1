@@ -7,4 +7,6 @@ const (
 	INGEST_ROUTE = API_ROUTE + "/ingest"
 
 	SENSOR_DATA = INGEST_ROUTE + "/sensor-data"
+
+	SENSORS = INGEST_ROUTE + "/sensors"
 )

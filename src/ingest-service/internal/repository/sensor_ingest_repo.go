@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"IDIG4110/ingest-service/internal/db"
+	"IDIG4110/ingest-service/internal/domain"
 	"IDIG4110/shared/dto"
 )
 
@@ -29,6 +30,15 @@ const (
 			AND ($2::timestamptz IS NULL OR time >= $2::timestamptz)
 			AND ($3::timestamptz IS NULL OR time <= $3::timestamptz)
 		ORDER BY time ASC
+	`
+	findSensorsQuery = `
+		SELECT external_entity_id, device_class, unit,
+			MAX(time) AS last_seen,
+			COUNT(*) AS reading_count
+		FROM ingest.readings
+		WHERE ($1::text IS NULL OR external_entity_id = $1)
+		GROUP BY external_entity_id, device_class, unit
+		ORDER BY external_entity_id
 	`
 )
 
@@ -119,6 +129,38 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 	}
 
 	return readings, nil
+}
+
+func (r *SensorIngestRepoImpl) FindSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
+	rows, err := r.db.Conn.Query(ctx, findSensorsQuery, sensorID)
+	if err != nil {
+		return nil, fmt.Errorf("find sensors: %w", err)
+	}
+	defer rows.Close()
+
+	sensors := []domain.Sensor{}
+
+	for rows.Next() {
+		var sensor domain.Sensor
+
+		if err := rows.Scan(
+			&sensor.ExternalEntityID,
+			&sensor.DeviceClass,
+			&sensor.Unit,
+			&sensor.LastSeen,
+			&sensor.ReadingCount,
+		); err != nil {
+			return nil, fmt.Errorf("scan sensor: %w", err)
+		}
+
+		sensors = append(sensors, sensor)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return sensors, nil
 }
 
 func marshalAttributes(attributes map[string]any) ([]byte, error) {

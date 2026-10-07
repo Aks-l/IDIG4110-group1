@@ -9,6 +9,26 @@ import (
 	jsonutils "IDIG4110/shared/json-utils"
 )
 
+func GetSensors(svc domain.SensorIngestSvc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+
+		var sensorID *string
+		if id := q.Get("sensor_id"); id != "" {
+			sensorID = &id
+		}
+
+		sensors, err := svc.GetSensors(r.Context(), sensorID)
+		if err != nil {
+			httperror.HandleError(w, http.StatusInternalServerError, err, "failed to fetch sensors")
+			return
+		}
+		if err := jsonutils.Encode(w, http.StatusOK, sensors); err != nil {
+			httperror.HandleError(w, http.StatusBadRequest, err, httperror.ErrInternalServerError)
+		}
+	}
+}
+
 func GetSensorDataByTimeRange(svc domain.SensorIngestSvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()

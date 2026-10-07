@@ -12,6 +12,7 @@ func NewRouter(
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET " +SENSOR_DATA, handlers.GetSensorDataByTimeRange(svc))
+	mux.HandleFunc("GET " +SENSORS, handlers.GetSensors(svc))
 
 	return mux
 }

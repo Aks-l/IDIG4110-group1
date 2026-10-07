@@ -47,3 +47,12 @@ func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string
 
 	return data, nil
 }
+
+func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
+	sensors, err := s.repo.FindSensors(ctx, sensorID)
+	if err != nil {
+		return nil, err
+	}
+
+	return sensors, nil
+}
