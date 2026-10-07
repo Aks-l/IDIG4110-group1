@@ -2,9 +2,8 @@ package domain
 
 import "time"
 
-// EntityState is one entity joined with its latest known state. State is
-// nil when the entity has not been read yet; Previous is nil until a second
-// accepted reading arrives.
+// Entity joined with its latest known state
+// state nil when unread, previous nil until second reading
 type EntityState struct {
 	EntityID         string      `json:"entity_id"`
 	ExternalEntityID string      `json:"external_entity_id"`
@@ -21,8 +20,7 @@ type EntityState struct {
 	Previous         *StateValue `json:"previous"`
 }
 
-// StateValue is the latest known value of an entity. Exactly one of
-// ValueNum and ValueText is set, mirroring the readings contract.
+// Latest known value of an entity, exactly one of value_num/value_text set
 type StateValue struct {
 	ValueNum   *float64       `json:"value_num"`
 	ValueText  *string        `json:"value_text"`
@@ -30,7 +28,7 @@ type StateValue struct {
 	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
-// HomeSummary is the homes list item.
+// Homes list item
 type HomeSummary struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
@@ -38,8 +36,7 @@ type HomeSummary struct {
 	Timezone string  `json:"timezone"`
 }
 
-// Area is a room or zone within a home. Floor, area type, and geometry are
-// all optional.
+// Room or zone within a home
 type Area struct {
 	ID       string  `json:"id"`
 	HomeID   string  `json:"home_id"`
@@ -49,8 +46,7 @@ type Area struct {
 	Geometry any     `json:"geometry,omitempty"`
 }
 
-// Device is the normalized device model. A device is not required to be in
-// an area, and the descriptive fields are optional.
+// Normalized device model
 type Device struct {
 	ID           string  `json:"id"`
 	HomeID       string  `json:"home_id"`
@@ -64,28 +60,26 @@ type Device struct {
 	DeviceType   *string `json:"device_type,omitempty"`
 }
 
-// AreaState is an area with the entities registered to it.
+// Area with its registered entities
 type AreaState struct {
 	Area
 	Entities []EntityState `json:"entities"`
 }
 
-// DeviceState is a device with its entities.
+// Device with its entities
 type DeviceState struct {
 	Device
 	Entities []EntityState `json:"entities"`
 }
 
-// HomeState is the dashboard view of one home: its areas and devices, each
-// carrying their entities with current state.
+// Dashboard view of one home, areas and devices with entity states
 type HomeState struct {
 	Home    HomeSummary   `json:"home"`
 	Areas   []AreaState   `json:"areas"`
 	Devices []DeviceState `json:"devices"`
 }
 
-// EntityStatePage is one page of the filterable entity list. Total counts
-// every matching entity before paging so the frontend can build pagers.
+// One page of the filterable entity list, total counts all matches
 type EntityStatePage struct {
 	Items  []EntityState `json:"items"`
 	Total  int           `json:"total"`
@@ -93,9 +87,7 @@ type EntityStatePage struct {
 	Offset int           `json:"offset"`
 }
 
-// Relation is one edge of a home's structural graph: how two nodes (an
-// area, a device, or an entity) are connected. Edges are stored
-// directional, but bidirectional ones are semantically undirected.
+// One edge of a home's graph between two nodes (area, device or entity)
 type Relation struct {
 	ID            string     `json:"id"`
 	HomeID        string     `json:"home_id"`

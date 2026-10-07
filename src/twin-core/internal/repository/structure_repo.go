@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	// Structure API write queries; the auto-provisioning ones live in
-	// twin_state_repo.go.
+	// Structure API write queries, auto-provisioning lives in twin_state_repo.go
 
 	createHomeQuery = `
 		INSERT INTO homes (name, address, timezone)
@@ -185,8 +184,17 @@ func (r *TwinStateRepoImpl) UpdateArea(ctx context.Context, areaID string, req d
 	return a, nil
 }
 
-// GetArea fetches one area by id. It backs the no-op response of an empty
-// patch and is available for future read endpoints.
+// Fetches one area by id, backs empty patch no-op response
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - areaID [string] area id
+//
+// # Returns:
+//
+//   - Area
+//   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetArea(ctx context.Context, areaID string) (domain.Area, error) {
 	var a domain.Area
 	err := r.db.Conn.QueryRow(ctx, getAreaByIDQuery, areaID).
@@ -268,8 +276,17 @@ func (r *TwinStateRepoImpl) UpdateDevice(ctx context.Context, deviceID string, r
 	return d, nil
 }
 
-// GetDevice fetches one device by id. It backs the no-op response of an
-// empty patch and is available for future read endpoints.
+// Fetches one device by id, backs empty patch no-op response
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - deviceID [string] device id
+//
+// # Returns:
+//
+//   - Device
+//   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetDevice(ctx context.Context, deviceID string) (domain.Device, error) {
 	var d domain.Device
 	err := r.db.Conn.QueryRow(ctx, getDeviceByIDQuery, deviceID).
@@ -352,9 +369,16 @@ func (r *TwinStateRepoImpl) UpdateEntity(ctx context.Context, entityID string, r
 	return r.GetEntityState(ctx, id)
 }
 
-// jsonbArg keeps a decoded JSON value insertable into a jsonb column: nil
-// stays NULL, maps pass through, and anything else (arrays, nested shapes)
-// is marshaled explicitly.
+// Makes decoded JSON insertable into jsonb column
+// nil stays NULL, maps pass through, other shapes marshaled
+//
+// # Inputs:
+//
+//   - v [any] decoded JSON value
+//
+// # Returns:
+//
+//   - Value insertable into jsonb
 func jsonbArg(v any) any {
 	switch t := v.(type) {
 	case nil:
@@ -370,7 +394,15 @@ func jsonbArg(v any) any {
 	}
 }
 
-// jsonbParam keeps nil or empty maps a NULL jsonb instead of the JSON null.
+// Keeps nil or empty maps a NULL jsonb instead of JSON null
+//
+// # Inputs:
+//
+//   - m [map[string]any] map to insert
+//
+// # Returns:
+//
+//   - Map or nil for jsonb NULL
 func jsonbParam(m map[string]any) any {
 	if len(m) == 0 {
 		return nil
@@ -378,10 +410,16 @@ func jsonbParam(m map[string]any) any {
 	return m
 }
 
-// mapWriteError maps PostgreSQL constraint violations, classified by
-// shared/pgerrors, onto this service's sentinels: unique violations to
-// conflict, missing references to not found, and invalid values to bad
-// request.
+// Maps postgres constraint violations onto domain sentinels
+// unique -> conflict, missing reference -> not found, invalid value -> bad request
+//
+// # Inputs:
+//
+//   - err [error] error to map
+//
+// # Returns:
+//
+//   - Wrapped sentinel or err unchanged
 func mapWriteError(err error) error {
 	switch {
 	case pgerrors.IsUniqueViolation(err):

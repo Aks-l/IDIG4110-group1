@@ -1,8 +1,6 @@
-// Package validate runs tag-driven validation for request structs. It wraps
-// github.com/go-playground/validator with the platform's conventions: the
-// nonblank tag rejects empty or whitespace-only strings, and
-// jsonutils.Optional fields validate the value they carry only when one is
-// set.
+// Package validate: tag driven validation for request structs
+// wraps go-playground/validator, nonblank rejects blank strings,
+// Optional fields validate only when set
 package validate
 
 import (
@@ -19,6 +17,11 @@ import (
 
 var std = newStd()
 
+// Builds validator with platform conventions
+//
+// # Returns:
+//
+//   - Ready validator
 func newStd() *validator.Validate {
 	v := validator.New()
 	v.RegisterTagNameFunc(func(f reflect.StructField) string {
@@ -38,8 +41,15 @@ func newStd() *validator.Validate {
 	return v
 }
 
-// unwrapOptional returns the value an Optional field carries, or nil when the
-// field is absent or explicitly null so the remaining tags skip it.
+// Unwraps Optional field for tag validation
+//
+// # Inputs:
+//
+//   - field [reflect.Value] the Optional field
+//
+// # Returns:
+//
+//   - Carried value or nil when absent or null
 func unwrapOptional(field reflect.Value) any {
 	set := field.FieldByName("Set")
 	val := field.FieldByName("Value")
@@ -52,8 +62,15 @@ func unwrapOptional(field reflect.Value) any {
 	return val.Elem().Interface()
 }
 
-// Struct validates s against its validate tags and reports the first
-// failure, e.g. "home_id is not a uuid".
+// Validates correctness of struct reporting first failure
+//
+// # Inputs:
+//
+//   - s [any] the struct to be validated
+//
+// # Returns:
+//
+//   - First failure reported by validator or nil
 func Struct(s any) error {
 	err := std.Struct(s)
 	if err == nil {
@@ -67,6 +84,15 @@ func Struct(s any) error {
 	return fmt.Errorf("%s %s", fe.Field(), reason(fe))
 }
 
+// Maps field error to readable failure reason
+//
+// # Inputs:
+//
+//   - fe [validator.FieldError] the failed field
+//
+// # Returns:
+//
+//   - Readable reason
 func reason(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":

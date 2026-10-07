@@ -7,9 +7,7 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// Node deletes. Relation endpoints are plain uuids (no foreign keys), so
-// each delete removes the edges that referenced the node before deleting it,
-// in one transaction.
+// Node deletes, edges are removed explicitly in one transaction
 const (
 	deleteHomeQuery = `
 		DELETE FROM homes WHERE id = $1::uuid
@@ -48,9 +46,16 @@ const (
 	`
 )
 
-// DeleteHome removes a home with everything under it: areas, devices,
-// entities, twin_state rows, and relations all cascade on their home or
-// entity foreign keys.
+// Removes home, everything under it cascades
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - homeID [string] home id
+//
+// # Returns:
+//
+//   - ErrNotFound when home missing
 func (r *TwinStateRepoImpl) DeleteHome(ctx context.Context, homeID string) error {
 	ct, err := r.db.Conn.Exec(ctx, deleteHomeQuery, homeID)
 	if err != nil {
@@ -62,9 +67,17 @@ func (r *TwinStateRepoImpl) DeleteHome(ctx context.Context, homeID string) error
 	return nil
 }
 
-// DeleteArea removes an area and its relations. Devices and entities keep
-// existing: the foreign key sets their area_id to null, so deleting a room
-// unassigns instead of destroying them.
+// Removes area and its relations, devices and entities keep existing
+// with area_id set to null
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - areaID [string] area id
+//
+// # Returns:
+//
+//   - ErrNotFound when area missing
 func (r *TwinStateRepoImpl) DeleteArea(ctx context.Context, areaID string) error {
 	tx, err := r.db.Conn.Begin(ctx)
 	if err != nil {
@@ -87,9 +100,16 @@ func (r *TwinStateRepoImpl) DeleteArea(ctx context.Context, areaID string) error
 	return tx.Commit(ctx)
 }
 
-// DeleteDevice removes a device with its entities and their twin_state rows
-// (foreign key cascades), plus every relation that referenced the device or
-// any of its entities.
+// Removes device with its entities, state rows and relations
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - deviceID [string] device id
+//
+// # Returns:
+//
+//   - ErrNotFound when device missing
 func (r *TwinStateRepoImpl) DeleteDevice(ctx context.Context, deviceID string) error {
 	tx, err := r.db.Conn.Begin(ctx)
 	if err != nil {
@@ -112,8 +132,16 @@ func (r *TwinStateRepoImpl) DeleteDevice(ctx context.Context, deviceID string) e
 	return tx.Commit(ctx)
 }
 
-// DeleteEntity removes an entity with its twin_state row (foreign key
-// cascade) and the relations that referenced it.
+// Removes entity with its state row and relations
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - entityID [string] entity id
+//
+// # Returns:
+//
+//   - ErrNotFound when entity missing
 func (r *TwinStateRepoImpl) DeleteEntity(ctx context.Context, entityID string) error {
 	tx, err := r.db.Conn.Begin(ctx)
 	if err != nil {

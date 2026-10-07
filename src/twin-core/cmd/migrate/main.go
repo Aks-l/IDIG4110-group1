@@ -1,5 +1,5 @@
-// Command migrate runs database migrations for twin-core.
-// Config comes from env vars: DB_URL (required), MIGRATIONS_DIR (default "migrations").
+// Command migrate: runs twin-core database migrations
+// config from env, DB_URL required, MIGRATIONS_DIR defaults to "migrations"
 package main
 
 import (

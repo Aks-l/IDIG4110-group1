@@ -11,10 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Relation queries. Endpoints (from_id / to_id) are plain uuids rather than
-// foreign keys because an edge may connect an area, a device, or an entity,
-// so every relation write validates endpoints through ResolveNodeHome and
-// node deletes clean up their edges explicitly.
+// Relation queries, endpoints are plain uuids validated via ResolveNodeHome
 const (
 	relationColumns = `
 		id::text,
@@ -45,9 +42,18 @@ const (
 	`
 )
 
-// ResolveNodeHome reports which home a relation endpoint belongs to. The
-// service resolves both endpoints to enforce that an edge stays inside one
-// home.
+// Reports which home a relation endpoint belongs to
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - kind [string] node kind, area | device | entity
+//   - nodeID [string] node id
+//
+// # Returns:
+//
+//   - Home id of the node
+//   - ErrNotFound when node missing, ErrBadRequest on unknown kind
 func (r *TwinStateRepoImpl) ResolveNodeHome(ctx context.Context, kind, nodeID string) (string, error) {
 	query := ""
 	switch kind {
@@ -91,7 +97,17 @@ func (r *TwinStateRepoImpl) CreateRelation(ctx context.Context, homeID string, r
 	return rel, nil
 }
 
-// GetRelation reads one relation by id; it backs the PATCH no-op path.
+// Reads one relation by id, backs the PATCH no-op path
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - relationID [string] relation id
+//
+// # Returns:
+//
+//   - Relation
+//   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetRelation(ctx context.Context, relationID string) (domain.Relation, error) {
 	var rel domain.Relation
 	err := r.db.Conn.QueryRow(ctx, getRelationByIDQuery, relationID).
@@ -171,8 +187,17 @@ func (r *TwinStateRepoImpl) DeleteRelation(ctx context.Context, relationID strin
 	return nil
 }
 
-// ListRelationsByHome returns a home's edges for the graph view. An unknown
-// home is a 404, not an empty list.
+// Returns a home's edges for the graph view, unknown home is ErrNotFound
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - homeID [string] home id
+//
+// # Returns:
+//
+//   - Home's relations
+//   - ErrNotFound when home missing
 func (r *TwinStateRepoImpl) ListRelationsByHome(ctx context.Context, homeID string) ([]domain.Relation, error) {
 	var one int
 	err := r.db.Conn.QueryRow(ctx, `SELECT 1 FROM homes WHERE id = $1::uuid`, homeID).Scan(&one)

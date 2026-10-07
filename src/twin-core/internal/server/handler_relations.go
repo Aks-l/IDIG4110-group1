@@ -6,8 +6,16 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleRelations routes everything under /api/v1/relations: POST
-// registers an edge, PATCH {id} updates one, DELETE {id} removes one.
+// Routes everything under /api/v1/relations
+// POST creates, PATCH {id} updates, DELETE {id} removes
+//
+// # Inputs:
+//
+//   - svc [domain.StructureSvc] structure service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleRelations(svc domain.StructureSvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := belowCollection(r)
@@ -34,7 +42,13 @@ func handleRelations(svc domain.StructureSvc) http.HandlerFunc {
 	}
 }
 
-// createRelation registers one edge of a home's graph.
+// Registers one edge of a home's graph
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
 func createRelation(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc) {
 	req, ok := decodeBody[domain.CreateRelationRequest](w, r)
 	if !ok {
@@ -48,7 +62,14 @@ func createRelation(w http.ResponseWriter, r *http.Request, svc domain.Structure
 	respondCreated(w, relation)
 }
 
-// updateRelation changes an edge's metadata.
+// Updates one edge's metadata
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] relation id path segment
 func updateRelation(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	relationID, ok := validID(w, id, "relation")
 	if !ok {
@@ -66,7 +87,14 @@ func updateRelation(w http.ResponseWriter, r *http.Request, svc domain.Structure
 	respondJSON(w, relation)
 }
 
-// deleteRelation removes one edge.
+// Removes one edge
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] relation id path segment
 func deleteRelation(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	relationID, ok := validID(w, id, "relation")
 	if !ok {

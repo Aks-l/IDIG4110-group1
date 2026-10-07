@@ -7,8 +7,15 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleReadings routes /api/v1/readings, where ingest-service delivers
-// normalized readings one at a time.
+// Routes /api/v1/readings, ingest pushes one normalized reading at a time
+//
+// # Inputs:
+//
+//   - svc [domain.TwinStateSvc] twin state service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleReadings(svc domain.TwinStateSvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if belowCollection(r) != nil {
@@ -23,7 +30,13 @@ func handleReadings(svc domain.TwinStateSvc) http.HandlerFunc {
 	}
 }
 
-// applyReading decodes, validates, and applies one normalized reading.
+// Decodes, validates and applies one normalized reading
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.TwinStateSvc] twin state service
 func applyReading(w http.ResponseWriter, r *http.Request, svc domain.TwinStateSvc) {
 	reading, ok := decodeBody[dto.NormalizedReading](w, r)
 	if !ok {

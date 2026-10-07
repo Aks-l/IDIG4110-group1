@@ -6,12 +6,18 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleHomes routes everything under /api/v1/homes:
+// Routes everything under /api/v1/homes
+// POST creates, GET lists, PATCH {id} updates, DELETE {id} removes
+// {id}/state: dashboard view, {id}/relations: relation graph
 //
-//   - the collection: POST registers a home, GET lists them
-//   - one home by id: PATCH updates it, DELETE removes it
-//   - sub-resources: GET {id}/state is the dashboard view, GET
-//     {id}/relations is the home's relation graph
+// # Inputs:
+//
+//   - structureSvc [domain.StructureSvc] structure service
+//   - querySvc [domain.StateQuerySvc] state query service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleHomes(structureSvc domain.StructureSvc, querySvc domain.StateQuerySvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := belowCollection(r)
@@ -58,7 +64,13 @@ func handleHomes(structureSvc domain.StructureSvc, querySvc domain.StateQuerySvc
 	}
 }
 
-// createHome registers a home.
+// Registers a home
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
 func createHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc) {
 	req, ok := decodeBody[domain.CreateHomeRequest](w, r)
 	if !ok {
@@ -72,7 +84,13 @@ func createHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc)
 	respondCreated(w, home)
 }
 
-// listHomes serves the homes list.
+// Serves homes list
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StateQuerySvc] state query service
 func listHomes(w http.ResponseWriter, r *http.Request, svc domain.StateQuerySvc) {
 	homes, err := svc.ListHomes(r.Context())
 	if err != nil {
@@ -82,7 +100,14 @@ func listHomes(w http.ResponseWriter, r *http.Request, svc domain.StateQuerySvc)
 	respondJSON(w, homes)
 }
 
-// updateHome modifies one home.
+// Updates one home
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] home id path segment
 func updateHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	homeID, ok := validID(w, id, "home")
 	if !ok {
@@ -100,7 +125,14 @@ func updateHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc,
 	respondJSON(w, home)
 }
 
-// deleteHome removes one home.
+// Removes one home
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] home id path segment
 func deleteHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	homeID, ok := validID(w, id, "home")
 	if !ok {
@@ -113,8 +145,14 @@ func deleteHome(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc,
 	respondNoContent(w)
 }
 
-// getHomeState serves one home's dashboard view: areas and devices with
-// their entities and current state.
+// Serves one home's dashboard view
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StateQuerySvc] state query service
+//   - id [string] home id path segment
 func getHomeState(w http.ResponseWriter, r *http.Request, svc domain.StateQuerySvc, id string) {
 	homeID, ok := validID(w, id, "home")
 	if !ok {
@@ -128,7 +166,14 @@ func getHomeState(w http.ResponseWriter, r *http.Request, svc domain.StateQueryS
 	respondJSON(w, state)
 }
 
-// listHomeRelations serves the edges of one home's graph view.
+// Serves one home's relation edges
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] home id path segment
 func listHomeRelations(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	homeID, ok := validID(w, id, "home")
 	if !ok {

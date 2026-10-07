@@ -26,7 +26,7 @@ Each database runs in its own container. `ingest_db` uses the TimescaleDB image 
 | `raw_messages` | Hypertable of raw MQTT payloads before normalization, 7-day retention |
 | `commands` | Audit of commands sent to devices, with lifecycle status and correlation id |
 
-### twin_db (planned)
+### twin_db (exists)
 
 | Table | Purpose |
 |---|---|
@@ -87,11 +87,11 @@ Gateway-specific or experimental data goes in designated JSONB columns (`attribu
 | gateway type | `home_assistant` | `gateways.gateway_type` check |
 | gateway status | `online`, `offline`, `error`, `unknown` | `gateways.status` check |
 | command status | `pending`, `sent`, `acknowledged`, `failed`, `timeout` | `commands.status` check |
-| relation type | `connects_to`, `contains`, `monitors`, `controls`, `same_physical_device`, `depends_on` | `twin_relations.relation_type` check (planned) |
+| relation type | `connects_to`, `contains`, `monitors`, `controls`, `same_physical_device`, `depends_on` | `twin_relations.relation_type` check |
 | incident severity | `info`, `warning`, `critical` | `incidents.severity` check (planned) |
 | incident status | `open`, `acknowledged`, `resolved` | `incidents.status` check (planned) |
 | notification channel | `ui`, `email`, `push` | `notifications.channel` check (planned) |
-| home member role | `owner`, `member`, `viewer` | `home_members.role` check (planned) |
+| home member role | `owner`, `member`, `viewer` | `home_members.role` check |
 
 Normalized command names (`turn_on`, `turn_off`, `set_temperature`, ...) are defined in [gateway-api.md](gateway-api.md).
 
@@ -103,8 +103,8 @@ These exist now so later features need no migration on populated tables:
 - `commands.issued_by` and `commands.expires_at`: audit of who issued a command, and a TTL so stale commands expire instead of firing late.
 - `commands.correlation_id`: links a command to its MQTT response and to any resulting state change.
 - `gateways.protocol_version`: adapter contract versioning once more gateways join.
-- `entities.command_map` (planned): per-entity mapping from normalized command to gateway-native action.
-- `twin_relations.valid_from` / `valid_to` (planned): time-varying topology without losing history.
+- `entities.command_map`: per-entity mapping from normalized command to gateway-native action.
+- `twin_relations.valid_from` / `valid_to`: time-varying topology without losing history.
 
 ## Related documents
 

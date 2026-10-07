@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	// Write path: resolve the reading's (gateway_id, external_entity_id) to
-	// an entity, auto-provisioning a placeholder device and entity under the
-	// default home on first sight.
+	// Write path, auto-provisions placeholder device and entity on first sight
 
 	ensureDefaultHomeQuery = `
 		INSERT INTO homes (id, name)
@@ -51,7 +49,7 @@ const (
 		WHERE device_id = $1::uuid AND external_entity_id = $2
 	`
 
-	// Readings arrive with the source's entity id.
+	// Readings arrive with the source's entity id
 	resolveEntityQuery = `
 		SELECT e.id::text
 		FROM entities e
@@ -61,10 +59,7 @@ const (
 		LIMIT 1
 	`
 
-	// Last-write-wins keyed on the reading's event time: replays and
-	// out-of-order readings never regress newer state, and each accepted,
-	// strictly newer reading moves the superseded row into the previous_*
-	// columns (change detection, not history).
+	// Last-write-wins on reading time, superseded values move to previous_*
 	upsertStateQuery = `
 		INSERT INTO twin_state (entity_id, value_num, value_text, attributes, updated_at)
 		VALUES ($1::uuid, $2, $3, $4, $5)
@@ -84,7 +79,7 @@ const (
 		WHERE EXCLUDED.updated_at >= twin_state.updated_at
 	`
 
-	// Read path.
+	// Read path
 
 	listHomesQuery = `
 		SELECT id::text, name, address, timezone
@@ -113,7 +108,7 @@ const (
 		ORDER BY name
 	`
 
-	// uuid columns are cast to text so they scan into Go strings.
+	// uuid columns cast to text, scans into Go strings
 	entityStateColumns = `
 		e.id::text,
 		e.external_entity_id,
@@ -164,9 +159,18 @@ func NewTwinStateRepoImpl(db *db.Database) *TwinStateRepoImpl {
 	}
 }
 
-// ApplyReading resolves the reading's (gateway_id, external_entity_id) to an
-// entity, auto-provisioning a placeholder device and entity under the
-// default home on first sight, then upserts the entity's current state.
+// Applies one reading to twin_state
+// resolves entity by (gateway_id, external_entity_id), auto-provisions
+// placeholder device and entity on first sight
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - reading [dto.NormalizedReading] the reading to apply
+//
+// # Returns:
+//
+//   - Error on resolve, provision or upsert failure
 func (r *TwinStateRepoImpl) ApplyReading(ctx context.Context, reading dto.NormalizedReading) error {
 	tx, err := r.db.Conn.Begin(ctx)
 	if err != nil {
@@ -196,9 +200,18 @@ func (r *TwinStateRepoImpl) ApplyReading(ctx context.Context, reading dto.Normal
 	return nil
 }
 
-// provisionEntity registers a placeholder device and entity for a reading
-// whose entity has never been seen. Gateway sync can refine or replace the
-// placeholders later.
+// Registers placeholder device and entity for unseen entity
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - tx [pgx.Tx] transaction
+//   - reading [dto.NormalizedReading] the reading being applied
+//
+// # Returns:
+//
+//   - New entity id
+//   - Error on failure
 func (r *TwinStateRepoImpl) provisionEntity(ctx context.Context, tx pgx.Tx, reading dto.NormalizedReading) (string, error) {
 	if _, err := tx.Exec(ctx, ensureDefaultHomeQuery, domain.DefaultHomeID); err != nil {
 		return "", fmt.Errorf("ensure default home: %w", err)
@@ -339,9 +352,18 @@ func (r *TwinStateRepoImpl) ListDevicesByHome(ctx context.Context, homeID string
 	return devices, rows.Err()
 }
 
-// ListEntityStates returns one page of the entity list. Filters combine
-// with AND; the zero filter lists everything. The areas join exists for the
-// floor filter, the twin_state join for current values.
+// Returns one page of the entity list
+// filters combine with AND, zero filter lists everything
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - filter [domain.EntityFilter] list filters
+//
+// # Returns:
+//
+//   - Page of entity states
+//   - Error on query failure
 func (r *TwinStateRepoImpl) ListEntityStates(ctx context.Context, filter domain.EntityFilter) (domain.EntityStatePage, error) {
 	conditions := []string{}
 	args := []any{}
@@ -462,7 +484,7 @@ func (r *TwinStateRepoImpl) GetEntityState(ctx context.Context, entityID string)
 	return e, nil
 }
 
-// scanner is satisfied by both pgx.Row and pgx.Rows.
+// Satisfied by both pgx.Row and pgx.Rows
 type scanner interface {
 	Scan(dest ...any) error
 }
@@ -505,7 +527,7 @@ func scanEntityState(row scanner) (domain.EntityState, error) {
 		return state, err
 	}
 
-	// No twin_state row yet: the entity is known but has not been read.
+	// No twin_state row yet, entity known but unread
 	if updatedAt != nil {
 		state.State = &domain.StateValue{
 			ValueNum:   valueNum,
@@ -515,7 +537,7 @@ func scanEntityState(row scanner) (domain.EntityState, error) {
 		}
 	}
 
-	// Only one accepted reading so far: there is nothing before it.
+	// Only one accepted reading, nothing before it
 	if prevUpdatedAt != nil {
 		state.Previous = &domain.StateValue{
 			ValueNum:   prevValueNum,
@@ -528,7 +550,15 @@ func scanEntityState(row scanner) (domain.EntityState, error) {
 	return state, nil
 }
 
-// attributesParam keeps nil or empty attributes a NULL jsonb instead of {}.
+// Keeps nil or empty attributes a NULL jsonb instead of {}
+//
+// # Inputs:
+//
+//   - reading [dto.NormalizedReading] reading with attributes
+//
+// # Returns:
+//
+//   - Attributes map or nil for jsonb NULL
 func attributesParam(reading dto.NormalizedReading) any {
 	if len(reading.Attributes) == 0 {
 		return nil
@@ -536,7 +566,15 @@ func attributesParam(reading dto.NormalizedReading) any {
 	return reading.Attributes
 }
 
-// entityName prefers the source's friendly_name when it carries one.
+// Picks entity name from friendly_name attribute
+//
+// # Inputs:
+//
+//   - reading [dto.NormalizedReading] reading with attributes
+//
+// # Returns:
+//
+//   - friendly_name when set, else external_entity_id
 func entityName(reading dto.NormalizedReading) string {
 	if name, ok := reading.Attributes["friendly_name"].(string); ok && strings.TrimSpace(name) != "" {
 		return domain.TruncateRunes(name, 255)

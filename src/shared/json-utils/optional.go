@@ -2,16 +2,21 @@ package jsonutils
 
 import "encoding/json"
 
-// Optional distinguishes an absent JSON field (no change on update) from a
-// field explicitly set to null (clear the value). Set reports whether the
-// field was present and Value the decoded value; Value is nil for null.
+// Optional PATCH field, absent means no change, null clears the value
 type Optional[T any] struct {
 	Set   bool
 	Value *T
 }
 
-// UnmarshalJSON runs only for fields present in the request body, so an
-// absent field keeps its zero value.
+// Decodes present fields only, absent fields keep zero value
+//
+// # Inputs:
+//
+//   - data []byte raw json value of the field
+//
+// # Returns:
+//
+//   - Decode error
 func (o *Optional[T]) UnmarshalJSON(data []byte) error {
 	o.Set = true
 	if string(data) == "null" {

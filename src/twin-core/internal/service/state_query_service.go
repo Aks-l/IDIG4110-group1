@@ -20,10 +20,18 @@ func (s *StateQuerySvcImpl) ListHomes(ctx context.Context) ([]domain.HomeSummary
 	return s.repo.ListHomes(ctx)
 }
 
-// GetHomeState assembles the dashboard view of one home: its areas and
-// devices, each carrying their entities with current state. An entity with
-// an area appears both under that area and under its device; the frontend
-// picks the grouping it needs.
+// Assembles dashboard view of one home
+// entity with area appears under both the area and its device
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - homeID [string] home id
+//
+// # Returns:
+//
+//   - Home state
+//   - ErrNotFound when home missing
 func (s *StateQuerySvcImpl) GetHomeState(ctx context.Context, homeID string) (domain.HomeState, error) {
 	home, err := s.repo.GetHome(ctx, homeID)
 	if err != nil {

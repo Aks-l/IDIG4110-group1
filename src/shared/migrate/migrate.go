@@ -1,5 +1,5 @@
-// Package migrate wraps golang-migrate for use by any service in this repo.
-// It is config-agnostic: callers pass the migrations directory and database URL.
+// Package migrate: golang-migrate wrapper for any service
+// directory and database url passed by caller
 package migrate
 
 import (
@@ -12,17 +12,29 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
+// Thin wrapper around golang-migrate
 type Migrator struct {
 	Migrate *migrate.Migrate
 }
 
+// Creates migrator from migrations directory and database url
+//
+// # Inputs:
+//
+//   - directory [string] path to migration files
+//   - url [string] postgres connection url
+//
+// # Returns:
+//
+//   - Migrator, initialized migrator instance
+//   - Init error if initialization fails
 func Init(directory, url string) (*Migrator, error) {
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", directory),
 		url,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initilze migrator: %w", err)
+		return nil, fmt.Errorf("failed to initialize migrator: %w", err)
 	}
 	slog.Info("Initilizing database migrator")
 
@@ -31,6 +43,11 @@ func Init(directory, url string) (*Migrator, error) {
 	}, nil
 }
 
+// Logs current schema version
+//
+// # Returns:
+//
+//   - Error on version check failure or dirty state
 func (m *Migrator) CheckMigrationStatus() error {
 	version, dirty, err := m.Migrate.Version()
 	if err != nil {
@@ -44,7 +61,11 @@ func (m *Migrator) CheckMigrationStatus() error {
 	return nil
 }
 
-// Up applies all pending migrations.
+// Applies all pending migrations
+//
+// # Returns:
+//
+//   - Error on migration failure, ErrNoChange ignored
 func (m *Migrator) Up() error {
 	if err := m.Migrate.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to apply migrations: %w", err)

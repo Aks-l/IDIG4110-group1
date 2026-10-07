@@ -1,7 +1,5 @@
-// Package httpclient is a JSON-over-HTTP client for service-to-service
-// calls. Non-2xx responses decode the shared {"code","message"} error
-// contract (see shared/httperror), so a caller can tell a permanent 4xx
-// rejection from a transient 5xx.
+// Package httpclient: JSON over HTTP client for service to service calls
+// non-2xx responses decode the shared error contract
 package httpclient
 
 import (
@@ -17,16 +15,23 @@ import (
 	"IDIG4110/shared/httperror"
 )
 
-// DefaultTimeout bounds one request when New is called without a timeout.
+// Request timeout when New gets timeout <= 0
 const DefaultTimeout = 10 * time.Second
 
-// Client is a JSON-over-HTTP client. It is safe for concurrent use.
+// JSON over HTTP client, safe for concurrent use
 type Client struct {
 	http *http.Client
 }
 
-// New returns a Client with the given per-request timeout; timeout <= 0
-// falls back to DefaultTimeout.
+// Creates client with per request timeout
+//
+// # Inputs:
+//
+//   - timeout [time.Duration] per request timeout
+//
+// # Returns:
+//
+//   - New client, DefaultTimeout when timeout <= 0
 func New(timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = DefaultTimeout
@@ -34,38 +39,75 @@ func New(timeout time.Duration) *Client {
 	return &Client{http: &http.Client{Timeout: timeout}}
 }
 
-// ResponseError is returned for every non-2xx response. Code and Message
-// come from the shared {"code","message"} error contract when the server
-// speaks it; otherwise Message falls back to the HTTP status text.
+// Error for every non-2xx response
 type ResponseError struct {
-	StatusCode int    // HTTP status code of the response
-	Code       int    // code echoed from the error-contract body, 0 when absent
-	Message    string // message from the error-contract body, or the status text
+	StatusCode int    // http status
+	Code       int    // code from error contract, 0 when absent
+	Message    string // message from error contract or status text
 }
 
+// Formats response error as "http <status>: <message>"
+//
+// # Returns:
+//
+//   - Formatted error string
 func (e *ResponseError) Error() string {
 	return fmt.Sprintf("http %d: %s", e.StatusCode, e.Message)
 }
 
-// Retryable reports whether the request may succeed if retried later:
-// server errors and rate limiting are transient, client errors are not.
+// Reports whether request is transient
+//
+// # Returns:
+//
+//   - True on 5xx or rate limiting, false on 4xx
 func (e *ResponseError) Retryable() bool {
 	return e.StatusCode >= 500 || e.StatusCode == http.StatusTooManyRequests
 }
 
-// PostJSON sends payload as JSON with POST and expects a 2xx response. Use
-// Do when the response body matters.
+// Sends payload as JSON with POST, discards response body
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - url [string] target url
+//   - payload [any] body, marshaled as JSON
+//
+// # Returns:
+//
+//   - Error on transport failure or non-2xx response
 func (c *Client) PostJSON(ctx context.Context, url string, payload any) error {
 	return c.Do(ctx, http.MethodPost, url, payload, nil)
 }
 
-// GetJSON sends GET and decodes a 2xx response body into out.
+// Sends GET and decodes 2xx response body into out
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - url [string] target url
+//   - out [any] decoded response body
+//
+// # Returns:
+//
+//   - Error on transport failure, non-2xx response or decode failure
 func (c *Client) GetJSON(ctx context.Context, url string, out any) error {
 	return c.Do(ctx, http.MethodGet, url, nil, out)
 }
 
-// Do sends one request: a non-nil payload becomes the JSON body and a 2xx
-// body is decoded into a non-nil out.
+// Sends one request
+// non-nil payload becomes JSON body, 2xx body decoded into non-nil out
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - method [string] http method
+//   - url [string] target url
+//   - payload [any] JSON body, nil for none
+//   - out [any] decoded response body, nil to discard
+//
+// # Returns:
+//
+//   - Error on failure or non-2xx response
 func (c *Client) Do(ctx context.Context, method, url string, payload, out any) error {
 	var body io.Reader
 	if payload != nil {
@@ -103,8 +145,15 @@ func (c *Client) Do(ctx context.Context, method, url string, payload, out any) e
 	return nil
 }
 
-// responseError turns a non-2xx response into a ResponseError, decoding
-// the shared error contract when the server speaks it.
+// Builds ResponseError from non-2xx response
+//
+// # Inputs:
+//
+//   - resp [*http.Response] non-2xx response
+//
+// # Returns:
+//
+//   - ResponseError with decoded error contract when present
 func responseError(resp *http.Response) error {
 	rErr := &ResponseError{
 		StatusCode: resp.StatusCode,
@@ -118,9 +167,15 @@ func responseError(resp *http.Response) error {
 	return rErr
 }
 
-// IsRetryable reports whether err is worth retrying: a 4xx rejection is
-// permanent, server errors, rate limiting, and transport failures may
-// succeed later, and a canceled context never retries.
+// Reports whether err is worth retrying
+//
+// # Inputs:
+//
+//   - err [error] error to inspect
+//
+// # Returns:
+//
+//   - False on 4xx rejection or canceled context, true otherwise
 func IsRetryable(err error) bool {
 	if err == nil {
 		return false

@@ -13,8 +13,17 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// decodeBody decodes and validates the request body into T, writing a 400
-// on a malformed body or a tag violation.
+// Decodes and validates request body into T, writes 400 on failure
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//
+// # Returns:
+//
+//   - Decoded value
+//   - False when response already written
 func decodeBody[T any](w http.ResponseWriter, r *http.Request) (T, bool) {
 	req, err := jsonutils.Decode[T](r)
 	if err != nil {
@@ -28,8 +37,18 @@ func decodeBody[T any](w http.ResponseWriter, r *http.Request) (T, bool) {
 	return req, true
 }
 
-// validID checks that an id path segment is a uuid, writing a 400 naming
-// the resource kind when it is not.
+// Checks id path segment is a uuid, writes 400 when not
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - id [string] id path segment
+//   - kind [string] resource kind for the error
+//
+// # Returns:
+//
+//   - The id
+//   - False when response already written
 func validID(w http.ResponseWriter, id, kind string) (string, bool) {
 	if !dto.IsValidUUID(id) {
 		respondBadRequest(w, fmt.Errorf("invalid %s id: %q", kind, id))
@@ -38,48 +57,79 @@ func validID(w http.ResponseWriter, id, kind string) (string, bool) {
 	return id, true
 }
 
-// respondJSON writes v as a 200 JSON body.
+// Writes v as 200 JSON body
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - v [any] value to encode
 func respondJSON(w http.ResponseWriter, v any) {
 	if err := jsonutils.Encode(w, http.StatusOK, v); err != nil {
 		httperror.HandleError(w, http.StatusInternalServerError, err, httperror.ErrInternalServerError)
 	}
 }
 
-// respondCreated writes v as a 201 JSON body.
+// Writes v as 201 JSON body
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - v [any] value to encode
 func respondCreated(w http.ResponseWriter, v any) {
 	if err := jsonutils.Encode(w, http.StatusCreated, v); err != nil {
 		httperror.HandleError(w, http.StatusInternalServerError, err, httperror.ErrInternalServerError)
 	}
 }
 
-// respondNoContent writes the empty 204 used by the delete endpoints.
+// Writes empty 204 for delete endpoints
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
 func respondNoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// respondBadRequest writes a 400 with err's reason as the message.
+// Writes 400 with err reason as message
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - err [error] error carrying the reason
 func respondBadRequest(w http.ResponseWriter, err error) {
 	httperror.HandleError(w, http.StatusBadRequest, err, err.Error())
 }
 
-// respondMethodNotAllowed writes a 405 listing the methods the path
-// supports, in the Allow header and the error body.
+// Writes 405 with allowed methods in Allow header
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - allowed [...string] allowed methods
 func respondMethodNotAllowed(w http.ResponseWriter, r *http.Request, allowed ...string) {
 	w.Header().Set("Allow", strings.Join(allowed, ", "))
 	httperror.HandleError(w, http.StatusMethodNotAllowed, fmt.Errorf("%s on %s", r.Method, r.URL.Path), httperror.ErrMethodNotAllowed)
 }
 
-// errUnknownPath marks a 404 caused by an undefined path rather than an
-// unknown id.
+// Marks 404 from undefined path, not unknown id
 var errUnknownPath = errors.New("unknown path")
 
-// respondNotFound writes a 404 for a path the API does not define.
+// Writes 404 for undefined path
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
 func respondNotFound(w http.ResponseWriter) {
 	httperror.HandleError(w, http.StatusNotFound, errUnknownPath, httperror.ErrNotFound)
 }
 
-// respondError maps a service error onto its HTTP status using the domain
-// sentinels.
+// Maps service error onto http status via domain sentinels
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - err [error] service error
 func respondError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):

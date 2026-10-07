@@ -10,8 +10,15 @@ import (
 	"IDIG4110/shared/dto"
 )
 
-// GenerateMockData builds one HA-style state_changed event for a simulated
-// temperature entity, as the HA Green hub would emit it.
+// Builds one HA state_changed event for a simulated temperature entity
+//
+// # Inputs:
+//
+//   - entityID [string] simulated entity id
+//
+// # Returns:
+//
+//   - Sensor state event
 func GenerateMockData(entityID string) dto.SensorStateEvent {
 	now := time.Now()
 	state := strconv.FormatFloat(18+rand.Float64()*8, 'f', 1, 64)
@@ -39,7 +46,11 @@ func GenerateMockData(entityID string) dto.SensorStateEvent {
 	}
 }
 
-// newContextID mimics HA context ids: 32 hex characters.
+// Builds HA style context id, 32 hex characters
+//
+// # Returns:
+//
+//   - Random context id
 func newContextID() string {
 	return fmt.Sprintf("%016x%016x", rand.Uint64(), rand.Uint64())
 }

@@ -6,8 +6,16 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleDevices routes everything under /api/v1/devices: POST registers a
-// device, PATCH {id} updates one, DELETE {id} removes one.
+// Routes everything under /api/v1/devices
+// POST creates, PATCH {id} updates, DELETE {id} removes
+//
+// # Inputs:
+//
+//   - svc [domain.StructureSvc] structure service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleDevices(svc domain.StructureSvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := belowCollection(r)
@@ -34,7 +42,13 @@ func handleDevices(svc domain.StructureSvc) http.HandlerFunc {
 	}
 }
 
-// createDevice registers a device.
+// Registers a device
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
 func createDevice(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc) {
 	req, ok := decodeBody[domain.CreateDeviceRequest](w, r)
 	if !ok {
@@ -48,7 +62,14 @@ func createDevice(w http.ResponseWriter, r *http.Request, svc domain.StructureSv
 	respondCreated(w, device)
 }
 
-// updateDevice modifies one device.
+// Updates one device
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] device id path segment
 func updateDevice(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	deviceID, ok := validID(w, id, "device")
 	if !ok {
@@ -66,7 +87,14 @@ func updateDevice(w http.ResponseWriter, r *http.Request, svc domain.StructureSv
 	respondJSON(w, device)
 }
 
-// deleteDevice removes one device.
+// Removes one device
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] device id path segment
 func deleteDevice(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	deviceID, ok := validID(w, id, "device")
 	if !ok {

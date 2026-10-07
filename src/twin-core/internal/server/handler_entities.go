@@ -6,11 +6,18 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleEntities routes everything under /api/v1/entities:
+// Routes everything under /api/v1/entities
+// POST creates, PATCH {id} updates, DELETE {id} removes
+// {id}/state: entity with current state
 //
-//   - the collection: POST registers an entity
-//   - one entity by id: PATCH updates it, DELETE removes it
-//   - sub-resource: GET {id}/state is the entity with its current state
+// # Inputs:
+//
+//   - structureSvc [domain.StructureSvc] structure service
+//   - querySvc [domain.StateQuerySvc] state query service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleEntities(structureSvc domain.StructureSvc, querySvc domain.StateQuerySvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := belowCollection(r)
@@ -43,7 +50,13 @@ func handleEntities(structureSvc domain.StructureSvc, querySvc domain.StateQuery
 	}
 }
 
-// createEntity registers an entity.
+// Registers an entity
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
 func createEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc) {
 	req, ok := decodeBody[domain.CreateEntityRequest](w, r)
 	if !ok {
@@ -57,7 +70,14 @@ func createEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSv
 	respondCreated(w, entity)
 }
 
-// updateEntity modifies one entity.
+// Updates one entity
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] entity id path segment
 func updateEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	entityID, ok := validID(w, id, "entity")
 	if !ok {
@@ -75,7 +95,14 @@ func updateEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSv
 	respondJSON(w, entity)
 }
 
-// deleteEntity removes one entity.
+// Removes one entity
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] entity id path segment
 func deleteEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	entityID, ok := validID(w, id, "entity")
 	if !ok {
@@ -88,7 +115,14 @@ func deleteEntity(w http.ResponseWriter, r *http.Request, svc domain.StructureSv
 	respondNoContent(w)
 }
 
-// getEntityState serves one entity with its current state.
+// Serves one entity with its current state
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StateQuerySvc] state query service
+//   - id [string] entity id path segment
 func getEntityState(w http.ResponseWriter, r *http.Request, svc domain.StateQuerySvc, id string) {
 	entityID, ok := validID(w, id, "entity")
 	if !ok {

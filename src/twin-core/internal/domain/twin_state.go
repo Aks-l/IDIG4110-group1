@@ -7,40 +7,33 @@ import (
 	"IDIG4110/shared/dto"
 )
 
-// DefaultHomeID is the sentinel home that placeholder devices are registered
-// under when a reading arrives for an entity never seen before. The fixed id
-// lets every worker resolve to the same row; gateway sync moves devices to
-// their real homes later.
+// Sentinel home for auto-provisioned placeholder devices
+// fixed id keeps every worker on the same row
 const DefaultHomeID = "00000000-0000-0000-0000-000000000001"
 
-// ErrNotFound signals a read for an id that does not exist; handlers map it
-// to 404.
+// Unknown id, handlers map to 404
 var ErrNotFound = errors.New("resource not found")
 
-// ErrInvalidReading wraps a contract violation in a received reading;
-// handlers map it to 400.
+// Reading contract violation, handlers map to 400
 var ErrInvalidReading = errors.New("invalid reading")
 
-// ErrBadRequest wraps a request validation failure; handlers map it to 400
-// with the reason.
+// Request validation failure, handlers map to 400
 var ErrBadRequest = errors.New("invalid request")
 
-// ErrConflict signals a uniqueness violation, e.g. a device that already
-// exists on the gateway; handlers map it to 409.
+// Uniqueness violation, handlers map to 409
 var ErrConflict = errors.New("conflict")
 
-// TwinStateRepo is the write path: apply one normalized reading to
-// twin_state.
+// Write path, applies one normalized reading to twin_state
 type TwinStateRepo interface {
 	ApplyReading(ctx context.Context, reading dto.NormalizedReading) error
 }
 
-// TwinStateSvc validates normalized readings and applies them.
+// Validates readings and applies them
 type TwinStateSvc interface {
 	ApplyReading(ctx context.Context, reading dto.NormalizedReading) error
 }
 
-// StateQueryRepo is the read path behind the frontend API.
+// Read path behind the frontend API
 type StateQueryRepo interface {
 	ListHomes(ctx context.Context) ([]HomeSummary, error)
 	GetHome(ctx context.Context, homeID string) (HomeSummary, error)
@@ -51,7 +44,7 @@ type StateQueryRepo interface {
 	GetEntityState(ctx context.Context, entityID string) (EntityState, error)
 }
 
-// StateQuerySvc serves the current state of the twin to the frontend.
+// Serves current twin state to the frontend
 type StateQuerySvc interface {
 	ListHomes(ctx context.Context) ([]HomeSummary, error)
 	GetHomeState(ctx context.Context, homeID string) (HomeState, error)
@@ -59,8 +52,7 @@ type StateQuerySvc interface {
 	GetEntityState(ctx context.Context, entityID string) (EntityState, error)
 }
 
-// StructureRepo is the write path for the structural model: homes, areas,
-// devices, entities, and the relations that connect them.
+// Write path for the structural model
 type StructureRepo interface {
 	CreateHome(ctx context.Context, req CreateHomeRequest) (HomeSummary, error)
 	UpdateHome(ctx context.Context, homeID string, req UpdateHomeRequest) (HomeSummary, error)
@@ -81,8 +73,7 @@ type StructureRepo interface {
 	ListRelationsByHome(ctx context.Context, homeID string) ([]Relation, error)
 }
 
-// StructureSvc manages the structural model; the frontend reaches it
-// through the gateway API.
+// Manages the structural model for the frontend
 type StructureSvc interface {
 	CreateHome(ctx context.Context, req CreateHomeRequest) (HomeSummary, error)
 	UpdateHome(ctx context.Context, homeID string, req UpdateHomeRequest) (HomeSummary, error)

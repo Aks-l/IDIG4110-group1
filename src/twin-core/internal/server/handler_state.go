@@ -6,8 +6,15 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleState routes /api/v1/state, the filterable, paginated list of
-// every entity with its current state.
+// Routes /api/v1/state, filterable paginated entity state list
+//
+// # Inputs:
+//
+//   - svc [domain.StateQuerySvc] state query service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleState(svc domain.StateQuerySvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if belowCollection(r) != nil {
@@ -22,8 +29,13 @@ func handleState(svc domain.StateQuerySvc) http.HandlerFunc {
 	}
 }
 
-// listEntityStates parses the filter params and serves one page of
-// entities.
+// Parses filter params and serves one entity page
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StateQuerySvc] state query service
 func listEntityStates(w http.ResponseWriter, r *http.Request, svc domain.StateQuerySvc) {
 	filter, err := parseEntityFilter(r.URL.Query())
 	if err != nil {

@@ -5,9 +5,15 @@ import (
 	"unicode/utf8"
 )
 
-// EntityDomain derives an entity's domain from the source's entity id the
-// way Home Assistant shapes its ids ("sensor.living_room_temperature" ->
-// "sensor").
+// Derives entity domain from HA shaped id ("sensor.temp" -> "sensor")
+//
+// # Inputs:
+//
+//   - externalEntityID [string] source entity id
+//
+// # Returns:
+//
+//   - Domain part, "unknown" when missing, max 50 chars
 func EntityDomain(externalEntityID string) string {
 	domain := externalEntityID
 	if i := strings.IndexByte(domain, '.'); i > 0 {
@@ -19,7 +25,16 @@ func EntityDomain(externalEntityID string) string {
 	return TruncateRunes(domain, 50)
 }
 
-// TruncateRunes limits s to max characters, staying on rune boundaries.
+// Limits s to max characters on rune boundaries
+//
+// # Inputs:
+//
+//   - s [string] value to truncate
+//   - max [int] max rune count
+//
+// # Returns:
+//
+//   - Truncated string
 func TruncateRunes(s string, max int) string {
 	if utf8.RuneCountInString(s) <= max {
 		return s

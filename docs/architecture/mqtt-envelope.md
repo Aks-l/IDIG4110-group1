@@ -118,6 +118,8 @@ HA event (trimmed):
 
 This produces the envelope example at the top: `data.entity_id` becomes `external_entity_id`, `time_fired` becomes `timestamp`, `context.id` becomes `event_id`, `state: "21.5"` becomes `value_num: 21.5`, and the full `attributes` object is preserved. A binary sensor (`state: "on"`, no unit) becomes `value_text: "on"`, `value_num: null`, `unit: null`.
 
+Current state: the device-simulator publishes exactly this event shape on MQTT in development, and ingest-service parses it; the translation into the normalized model above is not implemented yet.
+
 ## Guarantees
 
 - At-least-once delivery: QoS 1 on publish and subscribe. Consumers must tolerate duplicates, since gateways can re-send states on reconnect.

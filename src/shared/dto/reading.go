@@ -2,11 +2,7 @@ package dto
 
 import "time"
 
-// NormalizedReading is the normalized reading model from
-// docs/architecture/mqtt-envelope.md: adapters translate gateway-native
-// payloads into this shape, it flows over the readings topic to
-// ingest-service, and consumers such as twin-core receive it. A message
-// missing a core field is not a reading; extended fields are nullable.
+// Normalized reading shared across services, see docs/architecture/mqtt-envelope.md
 type NormalizedReading struct {
 	// Core.
 	GatewayID        string    `json:"gateway_id" validate:"required,uuid"`            // uuid of the source gateway

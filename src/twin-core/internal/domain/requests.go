@@ -6,11 +6,8 @@ import (
 	jsonutils "IDIG4110/shared/json-utils"
 )
 
-// Create and update payloads for the structure API. Field rules run as
-// validate tags (shared/validate); update payloads mark mutable fields with
-// jsonutils.Optional, distinguishing an absent field (no change) from an
-// explicit null (clear the value). Devices and entities can be registered
-// before they have a name or an area.
+// Create and update payloads for the structure API
+// field rules run as validate tags, Optional marks PATCH semantics
 
 type CreateHomeRequest struct {
 	Name     string  `json:"name" validate:"nonblank"`
@@ -84,9 +81,7 @@ type UpdateEntityRequest struct {
 	StateTTLSeconds jsonutils.Optional[int]            `json:"state_ttl_seconds"`
 }
 
-// EntityFilter carries the /state list endpoint's query params. The zero
-// value lists every entity; the handler fills Limit with the default page
-// size. All filters combine with AND.
+// Query params for the /state list endpoint, filters combine with AND
 type EntityFilter struct {
 	HomeID        string
 	AreaID        string
@@ -100,9 +95,7 @@ type EntityFilter struct {
 	Offset        int
 }
 
-// Relation payloads. A relation is one edge of a home's graph; endpoints
-// are (kind, id) pairs because an edge may connect an area, a device, or an
-// entity.
+// Relation payloads, endpoints are (kind, id) pairs
 
 type CreateRelationRequest struct {
 	HomeID        *string        `json:"home_id" validate:"omitempty,uuid"`

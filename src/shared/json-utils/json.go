@@ -6,6 +6,17 @@ import (
 	"net/http"
 )
 
+// Writes v as JSON response with status code
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - code [int] http status code
+//   - v [T] value to encode
+//
+// # Returns:
+//
+//   - Encoding error
 func Encode[T any](w http.ResponseWriter, code int, v T) error {
 	w.Header().Set("Content-Type", "application/json")
 	if code != http.StatusOK {
@@ -19,7 +30,16 @@ func Encode[T any](w http.ResponseWriter, code int, v T) error {
 	return nil
 }
 
-// Decode reads the request body as JSON into T.
+// Reads request body as JSON into T
+//
+// # Inputs:
+//
+//   - r [*http.Request] request carrying the body
+//
+// # Returns:
+//
+//   - Decoded value
+//   - Decode error
 func Decode[T any](r *http.Request) (T, error) {
 	var data T
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {

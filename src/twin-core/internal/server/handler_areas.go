@@ -6,8 +6,16 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// handleAreas routes everything under /api/v1/areas: POST registers an
-// area, PATCH {id} updates one, DELETE {id} removes one.
+// Routes everything under /api/v1/areas
+// POST creates, PATCH {id} updates, DELETE {id} removes
+//
+// # Inputs:
+//
+//   - svc [domain.StructureSvc] structure service
+//
+// # Returns:
+//
+//   - Collection handler
 func handleAreas(svc domain.StructureSvc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := belowCollection(r)
@@ -34,7 +42,13 @@ func handleAreas(svc domain.StructureSvc) http.HandlerFunc {
 	}
 }
 
-// createArea registers an area.
+// Registers an area
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
 func createArea(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc) {
 	req, ok := decodeBody[domain.CreateAreaRequest](w, r)
 	if !ok {
@@ -48,7 +62,14 @@ func createArea(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc)
 	respondCreated(w, area)
 }
 
-// updateArea modifies one area.
+// Updates one area
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] area id path segment
 func updateArea(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	areaID, ok := validID(w, id, "area")
 	if !ok {
@@ -66,7 +87,14 @@ func updateArea(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc,
 	respondJSON(w, area)
 }
 
-// deleteArea removes one area.
+// Removes one area
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - r [*http.Request] incoming request
+//   - svc [domain.StructureSvc] structure service
+//   - id [string] area id path segment
 func deleteArea(w http.ResponseWriter, r *http.Request, svc domain.StructureSvc, id string) {
 	areaID, ok := validID(w, id, "area")
 	if !ok {

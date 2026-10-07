@@ -7,10 +7,18 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// NewRouter wires each endpoint collection to a single handler. The mux
-// resolves only which collection a request belongs to; the collection
-// handler resolves the method and whether the request targets the
-// collection, a specific item, or a sub-resource.
+// Wires each endpoint collection to one handler
+// mux resolves collection only, handler resolves method and target
+//
+// # Inputs:
+//
+//   - querySvc [domain.StateQuerySvc] state query service
+//   - stateSvc [domain.TwinStateSvc] twin state service
+//   - structureSvc [domain.StructureSvc] structure service
+//
+// # Returns:
+//
+//   - Router handling all endpoints
 func NewRouter(querySvc domain.StateQuerySvc, stateSvc domain.TwinStateSvc, structureSvc domain.StructureSvc) http.Handler {
 	mux := http.NewServeMux()
 
@@ -32,16 +40,27 @@ func NewRouter(querySvc domain.StateQuerySvc, stateSvc domain.TwinStateSvc, stru
 	return mux
 }
 
-// registerCollection points the bare collection path and its subtree at
-// one handler, so /api/v1/homes and every path under /api/v1/homes/
-// resolve in the same place.
+// Points collection path and its subtree at one handler
+//
+// # Inputs:
+//
+//   - mux [*http.ServeMux] router to register on
+//   - collection [string] collection name
+//   - handler [http.Handler] collection handler
 func registerCollection(mux *http.ServeMux, collection string, handler http.Handler) {
 	mux.Handle(API_ROUTE+"/"+collection, handler)
 	mux.Handle(API_ROUTE+"/"+collection+"/", handler)
 }
 
-// apiSegments splits the request path into the segments below the API
-// prefix: /api/v1/homes/<id>/state becomes [homes <id> state].
+// Splits path into segments below the api prefix
+//
+// # Inputs:
+//
+//   - r [*http.Request] incoming request
+//
+// # Returns:
+//
+//   - Segments, /api/v1/homes/<id>/state -> [homes <id> state]
 func apiSegments(r *http.Request) []string {
 	rest := strings.TrimPrefix(r.URL.Path, API_ROUTE)
 	rest = strings.Trim(rest, "/")
@@ -51,9 +70,15 @@ func apiSegments(r *http.Request) []string {
 	return strings.Split(rest, "/")
 }
 
-// belowCollection returns the segments below the collection segment: for
-// /api/v1/homes/<id>/state it is [<id> state], and for the bare
-// collection path it is empty.
+// Returns segments below the collection segment
+//
+// # Inputs:
+//
+//   - r [*http.Request] incoming request
+//
+// # Returns:
+//
+//   - Segments after collection, empty for bare collection path
 func belowCollection(r *http.Request) []string {
 	segments := apiSegments(r)
 	if len(segments) < 2 {

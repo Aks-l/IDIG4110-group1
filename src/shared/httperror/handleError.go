@@ -6,11 +6,20 @@ import (
 	"net/http"
 )
 
+// Shared error response body {code, message}
 type ErrorMessage struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// Logs error and writes JSON error response
+//
+// # Inputs:
+//
+//   - w [http.ResponseWriter] response writer
+//   - code [int] http status code
+//   - err [error] error to log, returns early when nil
+//   - msg [string] message written to response
 func HandleError(w http.ResponseWriter, code int, err error, msg string) {
 	if err == nil {
 		slog.Warn("HandleError called with no error", "message", msg)

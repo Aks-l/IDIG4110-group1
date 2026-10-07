@@ -9,9 +9,8 @@ import (
 	"IDIG4110/twin-core/internal/domain"
 )
 
-// StructureSvcImpl manages the structural model behind the structure API.
-// Field rules are validate tags on the request structs; this layer applies
-// defaults and the cross-field rules tags cannot express.
+// Manages the structural model behind the structure API
+// applies defaults and cross-field rules validate tags cannot express
 type StructureSvcImpl struct {
 	repo domain.StructureRepo
 }
@@ -86,8 +85,16 @@ func (s *StructureSvcImpl) UpdateEntity(ctx context.Context, entityID string, re
 	return s.repo.UpdateEntity(ctx, entityID, req)
 }
 
-// requireNotNull rejects an update that clears a required field with null;
-// the value itself is checked by the field's validate tag.
+// Rejects update clearing a required field with null
+//
+// # Inputs:
+//
+//   - field [string] field name for the error
+//   - v [jsonutils.Optional[T]] the field value
+//
+// # Returns:
+//
+//   - ErrBadRequest when field is set to null
 func requireNotNull[T any](field string, v jsonutils.Optional[T]) error {
 	if v.Set && v.Value == nil {
 		return fmt.Errorf("%w: %s cannot be null", domain.ErrBadRequest, field)
@@ -95,6 +102,16 @@ func requireNotNull[T any](field string, v jsonutils.Optional[T]) error {
 	return nil
 }
 
+// Deletes home, refuses the auto-provisioning home
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - homeID [string] home id
+//
+// # Returns:
+//
+//   - ErrConflict when home is the default home
 func (s *StructureSvcImpl) DeleteHome(ctx context.Context, homeID string) error {
 	if homeID == domain.DefaultHomeID {
 		return fmt.Errorf("%w: cannot delete the auto-provisioning home", domain.ErrConflict)
@@ -114,9 +131,18 @@ func (s *StructureSvcImpl) DeleteEntity(ctx context.Context, entityID string) er
 	return s.repo.DeleteEntity(ctx, entityID)
 }
 
-// CreateRelation registers one edge of a home's graph. Tags check the field
-// values; this enforces the graph rules: no self-edges, both endpoints in
-// the same home, and a client-sent home_id that must match them.
+// Registers one edge of a home's graph
+// enforces no self-edges, endpoints in same home, matching home_id
+//
+// # Inputs:
+//
+//   - ctx [context.Context] request context
+//   - req [domain.CreateRelationRequest] relation payload
+//
+// # Returns:
+//
+//   - Created relation
+//   - Error on rule violation or repo failure
 func (s *StructureSvcImpl) CreateRelation(ctx context.Context, req domain.CreateRelationRequest) (domain.Relation, error) {
 	if req.FromKind == req.ToKind && req.FromID == req.ToID {
 		return domain.Relation{}, fmt.Errorf("%w: a relation cannot connect a node to itself", domain.ErrBadRequest)
