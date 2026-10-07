@@ -36,7 +36,7 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 		slog.Error("MQTT Handler", "error", err)
 		return
 	}
-	workerIndex := hash(state.EntityID) % len(c.workers)
+	workerIndex := hash(state.Data.EntityID) % len(c.workers)
 
 	select {
 	case c.workers[workerIndex] <- state:

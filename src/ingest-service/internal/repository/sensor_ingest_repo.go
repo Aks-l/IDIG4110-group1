@@ -29,7 +29,7 @@ func (r *SensorIngestRepoImpl) Insert(ctx context.Context, sensorData dto.Sensor
 	tag, err := r.db.Conn.Exec(
 		ctx,
 		insertSensorDataQuery,
-		sensorData.EntityID,
+		sensorData.Data.EntityID,
 		sensorData.EventType,
 		sensorData.TimeFired,
 	)

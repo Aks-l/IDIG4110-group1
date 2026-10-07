@@ -30,8 +30,8 @@ func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
 
 func (s *Simulator) Start() {
 	for i := 0; i < s.deviceCount; i++ {
-		eventId := fmt.Sprintf("b%015d", i+1)
-		go s.run(eventId)
+		entityID := fmt.Sprintf("sensor.mock_temperature_%02d", i+1)
+		go s.run(entityID)
 	}
 	select {}
 }
