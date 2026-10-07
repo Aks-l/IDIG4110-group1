@@ -23,12 +23,42 @@ export type OverviewData = {
   devices: { connected: number; warning: number; events: number };
 };
 
-export type EnergyRange = 'Today' | 'Week' | 'Month' | 'Year';
+export type EnergyPeriod = 'today' | 'week' | 'month' | 'year';
 
-export type EnergyData = {
-  labels: string[];
-  values: number[];
-  total: string;
+export type EnergyGranularity = 'hour' | 'day' | 'month';
+
+export type EnergySummary = {
+  period: EnergyPeriod;
+  totalKwh: number;              // total consumption in the period
+  estimatedCost: number;         // computed from totalKwh × tariff
+  currency: string;              // 'NOK'
+  comparedToPrevious: number;    // -0.12 = 12% less than previous period
+};
+
+export type EnergyPoint = {
+  timestamp: string;   // ISO 8601, start of the bucket
+  kwh: number;         // consumption for this bucket
+  cost: number;        // estimated cost for this bucket
+};
+
+export type EnergySeries = {
+  period: EnergyPeriod;
+  granularity: EnergyGranularity;
+  points: EnergyPoint[];
+};
+
+export type RoomEnergy = {
+  roomId: string;
+  roomName: string;
+  kwh: number;            // consumption in selected period
+  percentage: number;     // 0..1, share of total (for bar widths)
+  estimatedCost: number;  // cost for this room
+};
+
+export type EnergyPageData = {
+  summary: EnergySummary;
+  series: EnergySeries;
+  byRoom: RoomEnergy[];
 };
 
 export type RoomMetric = {
