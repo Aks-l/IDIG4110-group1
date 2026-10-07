@@ -69,14 +69,14 @@ func (r *SensorIngestRepoImpl) InsertReading(ctx context.Context, reading dto.Re
 	return nil
 }
 
-func (r *SensorIngestRepoImpl) InsertRawMessage(ctx context.Context, at time.Time, gatewayID, topic string, payload []byte) error {
+func (r *SensorIngestRepoImpl) InsertRawMessage(ctx context.Context, raw dto.RawMessage) error {
 	tag, err := r.db.Conn.Exec(
 		ctx,
 		insertRawMessageQuery,
-		at,
-		gatewayID,
-		topic,
-		payload,
+		raw.Time,
+		raw.GatewayID,
+		raw.Topic,
+		raw.Payload,
 	)
 	if err != nil {
 		return err

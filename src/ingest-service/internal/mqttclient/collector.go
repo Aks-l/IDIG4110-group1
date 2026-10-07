@@ -12,15 +12,15 @@ import (
 )
 
 type Collector struct {
-	workers []chan dto.Reading
+	workers []chan dto.RawMessage
 	svc     domain.SensorIngestSvc
 }
 
 func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Collector {
-	w := make([]chan dto.Reading, workerCount)
+	w := make([]chan dto.RawMessage, workerCount)
 
 	for i := range w {
-		w[i] = make(chan dto.Reading, bufferSize)
+		w[i] = make(chan dto.RawMessage, bufferSize)
 	}
 
 	return &Collector{
@@ -30,21 +30,21 @@ func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Coll
 }
 
 func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
-	var reading dto.Reading
+	var raw dto.RawMessage
 
-	if err := json.Unmarshal(msg.Payload(), &reading); err != nil {
+	if err := json.Unmarshal(msg.Payload(), &raw); err != nil {
 		slog.Error("MQTT Handler", "error", err, "topic", msg.Topic())
 		return
 	}
 
-	if err := c.svc.CreateRaw(context.Background(), reading.Time, reading.GatewayID, msg.Topic(), msg.Payload()); err != nil {
-		slog.Error("Failed to store raw message", "error", err, "topic", msg.Topic())
+	if err := c.svc.CreateRaw(context.Background(), raw); err != nil {
+		slog.Error("Failed to store raw message", "error", err, "topic", raw.Topic)
 	}
 
-	workerIndex := hash(reading.ExternalEntityID) % len(c.workers)
+	workerIndex := hash(raw.Topic) % len(c.workers)
 
 	select {
-	case c.workers[workerIndex] <- reading:
+	case c.workers[workerIndex] <- raw:
 	default:
 		slog.Warn("MQTT Collection is full")
 	}
@@ -52,9 +52,9 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 
 func (c *Collector) StartWorkers() {
 	for i, ch := range c.workers {
-		go func(entityID int, queue chan dto.Reading) {
-			for state := range queue {
-				if err := c.svc.Create(context.Background(), state); err != nil {
+		go func(entityID int, queue chan dto.RawMessage) {
+			for raw := range queue {
+				if err := c.svc.Create(context.Background(), raw); err != nil {
 					slog.Error("Failed to create sensor object", "error", err)
 				}
 			}

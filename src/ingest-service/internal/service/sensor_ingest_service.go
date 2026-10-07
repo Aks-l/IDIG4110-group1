@@ -20,7 +20,11 @@ func NewImplSensorIngestSvc(repo domain.SensorIngestRepo) *SensorIngestSvcImpl {
 	}
 }
 
-func (s *SensorIngestSvcImpl) Create(ctx context.Context, reading dto.Reading) error {
+func (s *SensorIngestSvcImpl) Create(ctx context.Context, raw dto.RawMessage) error {
+	reading, err := Normalize(raw)
+	if err != nil {
+		return err
+	}
 	if (reading.ValueNum == nil) == (reading.ValueText == nil) {
 		return fmt.Errorf("reading must have exactly one of value_num or value_text")
 	}
@@ -31,8 +35,8 @@ func (s *SensorIngestSvcImpl) Create(ctx context.Context, reading dto.Reading) e
 	return nil
 }
 
-func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, at time.Time, gatewayID, topic string, payload []byte) error {
-	return s.repo.InsertRawMessage(ctx, at, gatewayID, topic, payload)
+func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, raw dto.RawMessage) error {
+	return s.repo.InsertRawMessage(ctx, raw)
 }
 
 func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {

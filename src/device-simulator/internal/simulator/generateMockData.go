@@ -3,6 +3,7 @@ package simulator
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"IDIG4110/shared/dto"
@@ -25,16 +26,19 @@ func NextTemperature(current float64) float64 {
 	return next
 }
 
-func GenerateMockData(entityID, gatewayID string, temperature float64) dto.Reading {
-	return dto.Reading{
-		GatewayID:        gatewayID,
-		ExternalEntityID: entityID,
-		Time:             time.Now(),
-		DeviceClass:      "temperature",
-		ValueNum:         &temperature,
-		Unit:             "°C",
-		Attributes: map[string]any{
-			"friendly_name": fmt.Sprintf("Simulated temperature sensor %s", entityID),
+// GenerateMockData generates a device-native state event with a string state
+func GenerateMockData(entityID string, temperature float64) dto.StateEvent {
+	return dto.StateEvent{
+		EventType: "state_changed",
+		TimeFired: time.Now(),
+		EntityID:  entityID,
+		NewState: dto.NewState{
+			State: strconv.FormatFloat(temperature, 'f', 1, 64),
+			Attributes: map[string]string{
+				"device_class":        "temperature",
+				"unit_of_measurement": "°C",
+				"friendly_name":       fmt.Sprintf("Simulated temperature sensor %s", entityID),
+			},
 		},
 	}
 }

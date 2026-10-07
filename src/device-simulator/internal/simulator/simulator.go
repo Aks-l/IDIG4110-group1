@@ -8,6 +8,7 @@ import (
 
 	"IDIG4110/device-simulator/internal/broker"
 	"IDIG4110/device-simulator/internal/config"
+	"IDIG4110/shared/dto"
 )
 
 type Simulator struct {
@@ -42,14 +43,28 @@ func (s *Simulator) run(id string) {
 	temperature := 20.0
 	for {
 		temperature = NextTemperature(temperature)
-		reading := GenerateMockData(id, s.gatewayID, temperature)
-		payload, err := json.Marshal(reading)
+		event := GenerateMockData(id, temperature)
+
+		payload, err := json.Marshal(event)
 		if err != nil {
 			slog.Error("JSON marshal failed", "error", err)
+			continue
 		}
 
-		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")
-		s.broker.Publish(topic, s.qos, payload)
+		raw := dto.RawMessage{
+			Time:      event.TimeFired,
+			GatewayID: s.gatewayID,
+			Topic:     fmt.Sprintf("%s/%s/%s", s.topic, id, "state"),
+			Payload:   payload,
+		}
+
+		envelope, err := json.Marshal(raw)
+		if err != nil {
+			slog.Error("JSON marshal failed", "error", err)
+			continue
+		}
+
+		s.broker.Publish(raw.Topic, s.qos, envelope)
 
 		time.Sleep(time.Duration(s.interval) * time.Second)
 	}
