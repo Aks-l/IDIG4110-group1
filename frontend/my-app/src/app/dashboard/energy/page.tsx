@@ -61,13 +61,19 @@ function formatChange(ratio: number): string {
 
 type ConsumptionChartProps = {
   points: EnergyPoint[];
+  comparisonPoints?: EnergyPoint[];
   granularity: EnergyGranularity;
   period: EnergyPeriod;
   mode: EnergyMode;
 };
 
-function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChartProps) {
-  // In case of missing data, a placeholder is shown instead
+function ConsumptionChart({
+  points,
+  comparisonPoints,
+  granularity,
+  period,
+  mode,
+}: ConsumptionChartProps) {
   if (points.length === 0) {
     return (
       <div className="panel flex items-center justify-center px-6 py-16">
@@ -77,14 +83,24 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
       </div>
     );
   }
+
   const width = 760;
-  const height = 250;
+  const height = 260;
+  const chartLeft = 48;    // room for Y-axis label
+  const chartRight = 760;
   const chartTop = 24;
   const chartBottom = 198;
+  const chartWidth = chartRight - chartLeft;
+  const chartHeight = chartBottom - chartTop;
 
   const values = points.map((p) => p.kwh);
   const labels = points.map((p) => formatLabel(p.timestamp, granularity));
-  const maxValue = Math.max(...values, 1) * 1.15;
+
+  const comparisonValues = comparisonPoints?.map((p) => p.kwh) ?? [];
+  const showComparison = comparisonValues.length === values.length && values.length > 0;
+
+  const allValues = [...values, ...comparisonValues];
+  const maxValue = Math.max(...allValues, 1) * 1.15;
 
   // Show labels only at intervals — otherwise they overlap on 24/30-point charts.
   const labelStep =
@@ -93,17 +109,32 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
     5;
 
   const coords = values.map((value, i) => ({
-    x: (i / Math.max(values.length - 1, 1)) * width,
-    y: chartBottom - (value / maxValue) * (chartBottom - chartTop),
+    x: chartLeft + (i / Math.max(values.length - 1, 1)) * chartWidth,
+    y: chartBottom - (value / maxValue) * chartHeight,
   }));
 
+  const comparisonCoords = showComparison
+    ? comparisonValues.map((value, i) => ({
+        x: chartLeft + (i / Math.max(comparisonValues.length - 1, 1)) * chartWidth,
+        y: chartBottom - (value / maxValue) * chartHeight,
+      }))
+    : [];
+
   const line = coords.map(({ x, y }) => `${x},${y}`).join(' ');
-  const area = `0,${chartBottom} ${line} ${width},${chartBottom}`;
+  const area = `${chartLeft},${chartBottom} ${line} ${chartRight},${chartBottom}`;
+  const comparisonLine = comparisonCoords.map(({ x, y }) => `${x},${y}`).join(' ');
 
   const isProjected = mode === 'projected';
   const accentColor = isProjected ? '#8a5cf6' : '#1f6f5b';
   const fillTop = isProjected ? '#b79cff' : '#77b99c';
   const fillBottom = isProjected ? '#ece4ff' : '#dcefe3';
+
+  // Y-axis tick values (4 gridlines)
+  const yTicks = [0, 1, 2, 3].map((i) => {
+    const value = maxValue - (i / 3) * maxValue;
+    const y = chartTop + (i / 3) * chartHeight;
+    return { value, y };
+  });
 
   return (
     <div className="panel p-5 sm:p-6">
@@ -116,7 +147,7 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
             {isProjected ? 'Forecast' : 'Consumption'}
           </p>
           <h2 className="mt-1 text-lg font-semibold text-[#17221d]">
-            {isProjected ? 'Projected usage' : 'Energy usage'}
+            {isProjected ? 'Projected vs. current' : 'Energy usage'}
           </h2>
         </div>
         <span
@@ -144,13 +175,70 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
             </linearGradient>
           </defs>
 
-          {[0, 1, 2, 3].map((gridLine) => {
-            const y = chartTop + (gridLine / 3) * (chartBottom - chartTop);
-            return (
-              <line key={gridLine} x1="0" x2={width} y1={y} y2={y} stroke="#e3ebe4" strokeWidth="1" />
-            );
-          })}
+          {/* Y-axis label (rotated) */}
+          <text
+            x={14}
+            y={chartTop + chartHeight / 2}
+            fill="#68766d"
+            fontSize="12"
+            textAnchor="middle"
+            transform={`rotate(-90, 14, ${chartTop + chartHeight / 2})`}
+          >
+            kWh
+          </text>
 
+          {/* Y-axis tick labels */}
+          {yTicks.map(({ value, y }, i) => (
+            <text
+              key={i}
+              x={chartLeft - 8}
+              y={y + 4}
+              fill="#68766d"
+              fontSize="11"
+              textAnchor="end"
+            >
+              {value.toFixed(1)}
+            </text>
+          ))}
+
+          {/* Horizontal grid lines */}
+          {yTicks.map(({ y }, i) => (
+            <line
+              key={i}
+              x1={chartLeft}
+              x2={chartRight}
+              y1={y}
+              y2={y}
+              stroke="#e3ebe4"
+              strokeWidth="1"
+            />
+          ))}
+
+          {/* Y-axis line */}
+          <line
+            x1={chartLeft}
+            x2={chartLeft}
+            y1={chartTop}
+            y2={chartBottom}
+            stroke="#c9d4cb"
+            strokeWidth="1"
+          />
+
+          {/* Comparison line (current period) — muted, drawn behind */}
+          {showComparison && (
+            <polyline
+              points={comparisonLine}
+              fill="none"
+              stroke="#9fb3a7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              strokeDasharray="4 4"
+              opacity="0.7"
+            />
+          )}
+
+          {/* Primary area + line */}
           <polygon points={area} fill="url(#energy-fill)" />
           <polyline
             points={line}
@@ -162,6 +250,7 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
             strokeDasharray={isProjected ? '8 6' : undefined}
           />
 
+          {/* X-axis labels */}
           {coords.map(({ x }, i) => {
             const isFirst = i === 0;
             const isLast = i === coords.length - 1;
@@ -183,8 +272,26 @@ function ConsumptionChart({ points, granularity, period, mode }: ConsumptionChar
         </svg>
       </div>
 
-      <div className="mt-1 flex items-center justify-between text-xs text-[#68766d]">
-        <span>{isProjected ? 'Forecast' : 'Power draw'}</span>
+      {/* Legend + axis footer */}
+      <div className="mt-2 flex items-center justify-between text-xs text-[#68766d]">
+        <div className="flex items-center gap-4">
+          {showComparison && (
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-0.5 w-4 rounded-full bg-[#9fb3a7]"
+                style={{ borderTop: '2px dashed #9fb3a7', height: 0 }}
+              />
+              Current
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-0.5 w-4 rounded-full"
+              style={{ backgroundColor: accentColor }}
+            />
+            {isProjected ? 'Projected' : 'Usage'}
+          </span>
+        </div>
         <span>kWh</span>
       </div>
     </div>
@@ -199,16 +306,39 @@ export default function EnergyPage() {
   const [period, setPeriod] = useState<EnergyPeriod>('today');
   const [mode, setMode] = useState<EnergyMode>('current');
   const [data, setData] = useState<EnergyPageData | null>(null);
+  const [comparisonData, setComparisonData] = useState<EnergyPageData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadEnergy(period, mode)
-      .then(setData)
-      .catch(() => setError('Unable to load energy data'));
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const main = await loadEnergy(period, mode);
+        if (cancelled) return;
+        setData(main);
+
+        if (mode === 'projected') {
+          const comp = await loadEnergy(period, 'current');
+          if (cancelled) return;
+          setComparisonData(comp);
+        } else {
+          setComparisonData(null);
+        }
+      } catch {
+        if (!cancelled) setError('Unable to load energy data');
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [period, mode]);
 
   const reset = () => {
     setData(null);
+    setComparisonData(null);
     setError(null);
   };
 
@@ -226,7 +356,7 @@ export default function EnergyPage() {
         <h1 className="page-heading mt-2 text-3xl font-bold text-[#17221d] sm:text-4xl">Energy</h1>
         <p className="mt-2 text-sm text-[#68766d]">
           {isProjected
-            ? 'Forecast of upcoming energy usage and costs.'
+            ? 'Forecast of upcoming energy usage and costs, compared to current period.'
             : 'Current energy usage and costs.'}
         </p>
       </div>
@@ -238,7 +368,8 @@ export default function EnergyPage() {
           value={
             series.points.length === 0
               ? 'N/A'
-              :`${summary.totalKwh.toFixed(2)} kWh`}
+              : `${summary.totalKwh.toFixed(2)} kWh`
+          }
         />
         <InfoBox
           label={isProjected ? 'Projected cost' : 'Estimated cost'}
@@ -267,7 +398,7 @@ export default function EnergyPage() {
             </p>
             <p className="text-xs text-[#68766d]">
               {isProjected
-                ? 'Projected consumption based on your patterns and forecasted conditions.'
+                ? 'Projected consumption with current period shown for comparison.'
                 : 'Compare your consumption across different periods.'}
             </p>
           </div>
@@ -331,6 +462,7 @@ export default function EnergyPage() {
 
         <ConsumptionChart
           points={series.points}
+          comparisonPoints={comparisonData?.series.points}
           granularity={series.granularity}
           period={period}
           mode={mode}
@@ -355,29 +487,29 @@ export default function EnergyPage() {
             No room-level data for {PERIOD_LABELS[mode][period].toLowerCase()} yet.
           </p>
         ) : (
-        <ul className="space-y-4">
-          {byRoom.map((room) => (
-            <li key={room.roomId}>
-              <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="font-medium text-[#31453a]">{room.roomName}</span>
-                <span className="font-semibold text-[#17221d]">
-                  {room.kwh.toFixed(2)} kWh · {summary.currency}
-                  {room.estimatedCost.toFixed(2)}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[#e7eee8]">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${room.percentage * 100}%`,
-                    backgroundColor: isProjected ? '#8a5cf6' : '#4c9a7c',
-                  }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+          <ul className="space-y-4">
+            {byRoom.map((room) => (
+              <li key={room.roomId}>
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="font-medium text-[#31453a]">{room.roomName}</span>
+                  <span className="font-semibold text-[#17221d]">
+                    {room.kwh.toFixed(2)} kWh · {summary.currency}
+                    {room.estimatedCost.toFixed(2)}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[#e7eee8]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${room.percentage * 100}%`,
+                      backgroundColor: isProjected ? '#8a5cf6' : '#4c9a7c',
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

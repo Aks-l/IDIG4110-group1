@@ -13,9 +13,7 @@ export default async function OverviewPage() {
     <div className="mx-auto max-w-6xl space-y-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1f6f5b]">Good day</p>
-          <h2 className="page-heading mt-2 text-3xl font-bold text-[#17221d] sm:text-4xl">Your home at a glance</h2>
-          <p className="mt-2 max-w-xl text-sm text-[#68766d]">An overview of your homes current status and activity.</p>
+          <h2 className="page-heading mt-2 text-3xl font-bold text-[#17221d] sm:text-4xl">Residency Overview</h2>
         </div>
         <span className="w-fit rounded-full bg-[#e5f2e9] px-3 py-1.5 text-xs font-semibold text-[#1f6f5b]">All systems nominal</span>
       </section>
