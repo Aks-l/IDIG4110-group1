@@ -1,0 +1,84 @@
+# Data tier on data-vm: Kafka plus one TimescaleDB container per service.
+# Ports are bound to the VM's private IP only; sg-data limits access to the
+# k3s cluster. Data lives on the Cinder volumes mounted at /srv/kafka and
+# /srv/pgdata. Secrets come from .env (see .env.example), never from Git.
+
+x-db: &db
+  image: timescale/timescaledb:latest-pg17
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+
+services:
+  kafka:
+    image: apache/kafka:4.3.1
+    restart: unless-stopped
+    ports:
+      - "${DATA_VM_IP}:9092:9092"
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # Clients in the cluster must be told the VM's address, not localhost.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${DATA_VM_IP}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # Single broker: no replication, so every internal topic uses factor 1.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_HEAP_OPTS: -Xms1g -Xmx1g
+    volumes:
+      - /srv/kafka/data:/var/lib/kafka/data
+
+  ingest-db:
+    <<: *db
+    ports:
+      - "${DATA_VM_IP}:5432:5432"
+    environment:
+      POSTGRES_USER: ${INGEST_DB_USER}
+      POSTGRES_PASSWORD: ${INGEST_DB_PASSWORD}
+      POSTGRES_DB: ${INGEST_DB_NAME}
+    volumes:
+      - /srv/pgdata/ingest:/var/lib/postgresql/data
+
+  twin-db:
+    <<: *db
+    ports:
+      - "${DATA_VM_IP}:5433:5432"
+    environment:
+      POSTGRES_USER: ${TWIN_DB_USER}
+      POSTGRES_PASSWORD: ${TWIN_DB_PASSWORD}
+      POSTGRES_DB: ${TWIN_DB_NAME}
+    volumes:
+      - /srv/pgdata/twin:/var/lib/postgresql/data
+
+  rules-db:
+    <<: *db
+    ports:
+      - "${DATA_VM_IP}:5434:5432"
+    environment:
+      POSTGRES_USER: ${RULES_DB_USER}
+      POSTGRES_PASSWORD: ${RULES_DB_PASSWORD}
+      POSTGRES_DB: ${RULES_DB_NAME}
+    volumes:
+      - /srv/pgdata/rules:/var/lib/postgresql/data
+
+  identity-db:
+    <<: *db
+    ports:
+      - "${DATA_VM_IP}:5435:5432"
+    environment:
+      POSTGRES_USER: ${IDENTITY_DB_USER}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      POSTGRES_DB: ${IDENTITY_DB_NAME}
+    volumes:
+      - /srv/pgdata/identity:/var/lib/postgresql/data

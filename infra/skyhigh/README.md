@@ -69,6 +69,75 @@ them first if they hold anything you need:
 openstack --os-cloud openstack stack delete twin
 ```
 
+> **Warning:** Preview every update first with `openstack stack update --dry-run ...`.
+> Heat replaces a VM whenever its boot script or image changes. For small
+> changes such as a single security group rule, it is often safer to add the
+> rule directly with `openstack security group rule create` and update the
+> template to match. That is how the 5433–5435 rule was added on 2026-10-05.
+
+## Data tier on data-vm
+
+[`data-vm/compose.yaml`](data-vm/compose.yaml) runs Kafka (port 9092) and one
+TimescaleDB container per service: `ingest_db` 5432, `twin_db` 5433,
+`rules_db` 5434 and `identity_db` 5435. All ports are bound to the VM's private
+IP and reachable only from the k3s cluster. Data lives on the Cinder volumes at
+`/srv/kafka/data` and `/srv/pgdata/<service>`.
+
+The live `.env` with generated passwords exists only on data-vm (mode 600).
+
+## Deploying
+
+[`deploy.sh`](deploy.sh) puts everything on top of the stack. Run it from Git
+Bash or a Linux/macOS shell on the NTNU network or VPN. It reaches every VM
+through k3s-server and is safe to re-run.
+
+Deploy or update everything:
+
+```bash
+./infra/skyhigh/deploy.sh up
+```
+
+Deploy one part only:
+
+```bash
+./infra/skyhigh/deploy.sh up data
+```
+
+The parts you can name are:
+
+- `access` installs the keys from [`authorized_keys`](authorized_keys) on
+  k3s-server, gives k3s-server its own key on the other VMs, and installs
+  `koble`.
+- `data` deploys Kafka and the databases on data-vm and generates `.env` there
+  the first time.
+- `k8s` creates the `data-tier` Secret in Kubernetes from data-vm's `.env`, then
+  applies every manifest under `infra/k8s/`.
+
+Stop the services and data containers. Volumes and data are kept:
+
+```bash
+./infra/skyhigh/deploy.sh down
+```
+
+Show nodes, pods and data containers:
+
+```bash
+./infra/skyhigh/deploy.sh status
+```
+
+Workloads read database credentials and `DATA_VM_IP` from the `data-tier`
+Secret, so passwords never pass through Git or a laptop.
+
+If the stack is rebuilt, its IPs change. Set `FLOATING_IP`, `AGENT1_IP`,
+`AGENT2_IP` and `DATA_IP` in the environment or at the top of the script, using
+the values from `openstack stack output show twin --all`.
+
+## Getting around
+
+From `k3s-server`, `koble agent1`, `koble agent2` and `koble data` SSH onto the
+other VMs, using k3s-server's own key. You can add a command after the name,
+for example `koble data docker ps`.
+
 ## After the VMs boot
 
 - Each VM's boot script logs to `/var/log/twin-bootstrap.log`.

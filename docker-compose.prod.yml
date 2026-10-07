@@ -15,7 +15,7 @@ services:
       POSTGRES_PASSWORD: ${INGEST_DB_PASSWORD:-ingest}
       POSTGRES_DB: ${INGEST_DB_NAME:-ingest_db}
     volumes:
-      - ingest_db_data:/var/lib/postgresql
+      - ingest_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -30,7 +30,7 @@ services:
       POSTGRES_PASSWORD: ${TWIN_DB_PASSWORD:-twin}
       POSTGRES_DB: ${TWIN_DB_NAME:-twin_db}
     volumes:
-      - twin_db_data:/var/lib/postgresql
+      - twin_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -45,7 +45,7 @@ services:
       POSTGRES_PASSWORD: ${RULES_DB_PASSWORD:-rules}
       POSTGRES_DB: ${RULES_DB_NAME:-rules_db}
     volumes:
-      - rules_db_data:/var/lib/postgresql
+      - rules_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -60,7 +60,7 @@ services:
       POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity}
       POSTGRES_DB: ${IDENTITY_DB_NAME:-identity_db}
     volumes:
-      - identity_db_data:/var/lib/postgresql
+      - identity_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
