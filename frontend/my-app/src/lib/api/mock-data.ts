@@ -1,4 +1,4 @@
-import type { Automation, Event, RoomData } from './types';
+import type { Automation, Event, RoomData, Projection } from './types';
 
 export const mockRooms: Record<string, RoomData> = {
   'living-room': {
@@ -103,4 +103,68 @@ export const mockEvents: Event[] = [
   { id: '4', timestamp: '2026-09-15T13:41:00', title: 'Motion detected', location: 'Hallway', severity: 'info' },
   { id: '5', timestamp: '2026-09-15T13:12:00', title: 'Smoke level rising', location: 'Kitchen', severity: 'warning' },
   { id: '6', timestamp: '2026-09-15T12:55:00', title: 'Living room light turned on', location: 'Living Room', severity: 'info' },
+];
+
+
+
+export const mockProjections: Projection[] = [
+  {
+    id: 'p1',
+    timestamp: '2026-10-07T08:15:00',
+    title: 'Pipe burst risk',
+    description: 'Pressure anomalies detected in the bathroom supply line over the past 3 days.',
+    location: 'Bathroom',
+    category: 'maintenance',
+    severity: 'high',
+    confidence: 0.78,
+    horizon: '5–10 days',
+    recommendedAction: 'Inspect shut-off valve and pressure regulator.',
+  },
+  {
+    id: 'p2',
+    timestamp: '2026-10-07T07:50:00',
+    title: 'Fire risk — unattended cooking',
+    description: 'Cooktop left on with no motion detected in the kitchen for 18 minutes.',
+    location: 'Kitchen',
+    category: 'safety',
+    severity: 'critical',
+    confidence: 0.92,
+    horizon: 'immediate',
+    recommendedAction: 'Turn off cooktop or confirm someone is present.',
+  },
+  {
+    id: 'p3',
+    timestamp: '2026-10-06T21:30:00',
+    title: 'Refrigerator efficiency dropping',
+    description: 'Power draw has increased 22% over the past two weeks while internal temperature held steady.',
+    location: 'Kitchen',
+    category: 'maintenance',
+    severity: 'medium',
+    confidence: 0.68,
+    horizon: '2–3 weeks',
+    recommendedAction: 'Check door seals and condenser coils.',
+  },
+  {
+    id: 'p4',
+    timestamp: '2026-10-06T18:12:00',
+    title: 'Entry risk tonight',
+    description: 'Front door left unlocked after 22:00 — three nights in a row this week.',
+    location: 'Entrance',
+    category: 'security',
+    severity: 'high',
+    confidence: 0.81,
+    horizon: 'tonight',
+    recommendedAction: 'Enable auto-lock schedule for the front door.',
+  },
+  {
+    id: 'p5',
+    timestamp: '2026-10-06T14:00:00',
+    title: 'Energy spike forecast',
+    description: 'Cold snap forecast — expect 18% higher heating load tomorrow evening.',
+    category: 'energy',
+    severity: 'low',
+    confidence: 0.85,
+    horizon: 'tomorrow',
+    recommendedAction: 'Pre-heat earlier or shift high-draw tasks to off-peak hours.',
+  },
 ];

@@ -108,6 +108,8 @@ export type RoomData = {
   activity: Activity[];
 };
 
+
+// EVENTS & PROJECTIONS
 export type Severity = 'info' | 'warning' | 'critical';
 
 export type Event = {
@@ -117,3 +119,24 @@ export type Event = {
   location?: string;
   severity: Severity;
 };
+
+export type ProjectionCategory = 'maintenance' | 'safety' | 'security' | 'energy';
+export type ProjectionSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type Projection = {
+  id: string;
+  timestamp: string;            // when the twin generated the prediction
+  title: string;
+  description: string;
+  location?: string;
+  category: ProjectionCategory;
+  severity: ProjectionSeverity;
+  confidence: number;           // 0..1
+  horizon: string;              // "5–10 days", "tonight"
+  recommendedAction?: string;
+};
+
+// A unified item for the Events page — either a past event or a future prediction.
+export type ActivityItem =
+  | ({ kind: 'event' } & Event)
+  | ({ kind: 'projection' } & Projection);
