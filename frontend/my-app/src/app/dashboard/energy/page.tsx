@@ -156,11 +156,9 @@ export default function EnergyPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setData(null);
-    setError(null);
-    loadEnergy(period)
-      .then(setData)
-      .catch(() => setError('Unable to load energy data'));
+  loadEnergy(period)
+    .then(setData)
+    .catch(() => setError('Unable to load energy data'));
   }, [period]);
 
   if (error) return <p className="text-red-600">{error}</p>;
@@ -208,7 +206,11 @@ export default function EnergyPage() {
               <button
                 key={option}
                 type="button"
-                onClick={() => setPeriod(option)}
+                onClick={() => {
+                setData(null);
+                setError(null);
+                setPeriod(option);
+              }}
                 aria-pressed={period === option}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors sm:px-4 ${
                   period === option
