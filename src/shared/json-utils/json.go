@@ -19,11 +19,12 @@ func Encode[T any](w http.ResponseWriter, code int, v T) error {
 	return nil
 }
 
-func Decode[T any](r *http.Request) error {
+// Decode reads the request body as JSON into T.
+func Decode[T any](r *http.Request) (T, error) {
 	var data T
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return fmt.Errorf("error: decoding json: %w", err)
+		return data, fmt.Errorf("error: decoding json: %w", err)
 	}
 
-	return nil
+	return data, nil
 }

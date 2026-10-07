@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -40,5 +41,13 @@ func (m *Migrator) CheckMigrationStatus() error {
 	}
 
 	slog.Info("Database schema", "version", version)
+	return nil
+}
+
+// Up applies all pending migrations.
+func (m *Migrator) Up() error {
+	if err := m.Migrate.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
 	return nil
 }
