@@ -12,6 +12,14 @@ See [docs/architecture](docs/architecture) for the data model and messaging cont
 docker compose up
 ```
 
+### Services
+
+| Service | Host port | Purpose |
+|---|---|---|
+| ingest-service | 8081 | Ingests gateway telemetry over MQTT into `ingest_db` |
+| device-simulator | 8082 | Publishes mock sensor events for development |
+| twin-core | 8083 | Receives normalized readings from ingest over HTTP, tracks current state per entity (`twin_state`), and serves it to the frontend |
+
 ### Databases
 
 Database-per-service: each microservice owns its own Postgres container. All use the TimescaleDB image; the `timescaledb` extension is only enabled where needed.

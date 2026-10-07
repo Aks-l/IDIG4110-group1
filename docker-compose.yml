@@ -105,6 +105,28 @@ services:
       - ingest-service
       - mosquitto
 
+  twin-core:
+    build:
+      context: .
+      dockerfile: infra/dev/twin-core.Dockerfile
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./src/twin-core:/app
+      - ./src/shared:/shared
+    environment:
+      # Lets `docker compose exec twin-core go run ./cmd/migrate <cmd>`
+      # run without retyping the URL; the server itself reads config.yaml.
+      DB_URL: postgres://twin:twin@twin-db:5432/twin_db?sslmode=disable
+    depends_on:
+      twin-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   ingest_db_data_dev:
   twin_db_data_dev:

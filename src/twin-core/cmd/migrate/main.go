@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"IDIG4110/shared/migrate"
+	gmigrate "github.com/golang-migrate/migrate/v4"
 )
 
 func main() {
@@ -70,11 +72,19 @@ func handleUp(ctx context.Context, m *migrate.Migrator, args []string) {
 			os.Exit(1)
 		}
 		if err := m.Migrate.Steps(n); err != nil {
+			if errors.Is(err, gmigrate.ErrNoChange) {
+				slog.Info("No pending migrations; database is up to date")
+				return
+			}
 			slog.Error("Migration error", "err", err)
 			os.Exit(1)
 		}
 	} else {
 		if err := m.Migrate.Up(); err != nil {
+			if errors.Is(err, gmigrate.ErrNoChange) {
+				slog.Info("No pending migrations; database is up to date")
+				return
+			}
 			slog.Error("Migration error", "err", err)
 			os.Exit(1)
 		}
@@ -114,6 +124,10 @@ func handleDown(ctx context.Context, m *migrate.Migrator, args []string) {
 		slog.Error("migration timeout exceeded")
 	case err := <-done:
 		if err != nil {
+			if errors.Is(err, gmigrate.ErrNoChange) {
+				slog.Info("No migrations left to roll back")
+				return
+			}
 			slog.Error("rollback failed", "error", err)
 			return
 		}
