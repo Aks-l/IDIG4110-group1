@@ -18,7 +18,7 @@ type MqttConfig struct {
 	ConnectRetry         bool   `yaml:"connectRetry"`
 	ConnectRetryInterval int    `yaml:"connectRetryInterval"`
 	KeepAlive            int    `yaml:"keepAlive"`
-	PingTimeout          int    `yaml:"pingTimeout"`
+	PingTimeout          int    `yaml:"pingTimeOut"`
 	CleanSession         bool   `yaml:"cleanSession"`
 	Topic                string `yaml:"topic"`
 	Interval             int    `yaml:"interval"`
