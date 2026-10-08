@@ -10,37 +10,42 @@ From this directory, build and start the frontend with:
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The default Compose setup
-uses mock data. The app also ships placeholder API routes (`src/app/api`) that
-serve the frontend contract with fixture data, so `NEXT_PUBLIC_DATA_SOURCE=api`
-works without a backend:
-
-```env
-NEXT_PUBLIC_DATA_SOURCE=api
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
-```
-
-To connect a real backend, either point the browser at it directly
-(`NEXT_PUBLIC_API_URL=http://<backend>/api`), or keep the browser on the
-placeholder routes and set `PLACEHOLDER_API_TARGET=http://<backend>/api` — the
-placeholder routes then forward every request there. Either way no code changes
-are needed. See `docs/frontend/api.md` for the full contract.
-
-The endpoints the backend already implements can also be served from it while
-the rest stay on fixtures (hybrid mode): set
-`PLACEHOLDER_BACKEND_URL=http://localhost:8083` and
-`PLACEHOLDER_BACKEND_PATHS=/automations,/events`, and `/automations` plus
-`/events` are fetched from the rules-engine and translated onto the frontend
-contract. The twin-core scaffold adds a second hybrid for
-`/rooms,/devices,/3d/rooms` via `PLACEHOLDER_TWIN_URL` and
-`PLACEHOLDER_TWIN_PATHS`. `docs/frontend/api.md` documents the per-endpoint
-details of both.
-
-Then rebuild the image:
+Open [http://localhost:3000](http://localhost:3000). Compose builds with the
+same defaults as `npm run dev` with `.env.local`: the pages call the
+placeholder API routes (`NEXT_PUBLIC_DATA_SOURCE=api`), and `/automations`
+plus `/events` are served from the rules-engine (hybrid mode). The container
+reaches the backend stack's published ports through `host.docker.internal`,
+so bring the backend up first from the repository root:
 
 ```bash
-docker compose up --build
+docker compose up -d   # repository root
 ```
+
+Without the backend stack the automations and events pages show 502 errors;
+everything else keeps serving fixtures. The defaults live in
+`docker-compose.yml` and can be overridden from the shell (an empty variable
+falls back to the built-in default):
+
+```bash
+# back to mock mode without the placeholder routes
+NEXT_PUBLIC_DATA_SOURCE=mock docker compose up --build
+
+# also serve /rooms, /devices and /3d/rooms from twin-core (opt-in until
+# the scaffold branch merges; PLACEHOLDER_TWIN_PATHS defaults to these)
+PLACEHOLDER_TWIN_URL=http://host.docker.internal:8084 docker compose up -d
+```
+
+`NEXT_PUBLIC_*` variables are baked into the browser bundle at build time —
+after changing them, rebuild with `docker compose up --build`. The
+`PLACEHOLDER_*` variables are read server-side at request time and only need
+the container to be recreated (`docker compose up -d`).
+
+To connect a real backend instead, either point the browser at it directly
+(`NEXT_PUBLIC_API_URL=http://<backend>/api`), or keep the browser on the
+placeholder routes and set `PLACEHOLDER_API_TARGET=http://<backend>/api` — the
+placeholder routes then forward every request there. Either way no code
+changes are needed. `docs/frontend/api.md` documents the contract and both
+hybrid modes per endpoint.
 
 Stop the container with `docker compose down`.
 

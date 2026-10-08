@@ -4,20 +4,32 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-mock}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-mock}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+      NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
       PLACEHOLDER_API_TARGET: ${PLACEHOLDER_API_TARGET:-}
-      PLACEHOLDER_BACKEND_URL: ${PLACEHOLDER_BACKEND_URL:-}
-      PLACEHOLDER_BACKEND_PATHS: ${PLACEHOLDER_BACKEND_PATHS:-}
+      # Hybrid, matching what npm run dev reads from .env.local. The
+      # container reaches the backend stack's published ports through the
+      # Docker host: bring the stack up first (repo root: docker compose
+      # up -d), or these paths answer with 502 errors.
+      PLACEHOLDER_BACKEND_URL: ${PLACEHOLDER_BACKEND_URL:-http://host.docker.internal:8083}
+      PLACEHOLDER_BACKEND_PATHS: ${PLACEHOLDER_BACKEND_PATHS:-/automations,/events}
       PLACEHOLDER_BACKEND_HOME_ID: ${PLACEHOLDER_BACKEND_HOME_ID:-}
       PLACEHOLDER_BACKEND_TEMPERATURE_ENTITY: ${PLACEHOLDER_BACKEND_TEMPERATURE_ENTITY:-}
+      # Twin hybrid: opt-in until the twin-core scaffold branch merges into
+      # the stack (its compose publishes twin-core on host port 8084; this
+      # branch's 8084 is the api-gateway). Setting the URL is enough — the
+      # paths default below. Point at a stub to preview the mapping.
       PLACEHOLDER_TWIN_URL: ${PLACEHOLDER_TWIN_URL:-}
-      PLACEHOLDER_TWIN_PATHS: ${PLACEHOLDER_TWIN_PATHS:-}
+      PLACEHOLDER_TWIN_PATHS: ${PLACEHOLDER_TWIN_PATHS:-/rooms,/devices,/3d/rooms}
       PLACEHOLDER_TWIN_HOME_ID: ${PLACEHOLDER_TWIN_HOME_ID:-}
+    # Makes host.docker.internal resolve on Linux hosts too; Docker Desktop
+    # resolves it out of the box.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "3000:3000" 
+      - "3000:3000"
     restart: unless-stopped

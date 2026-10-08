@@ -155,6 +155,12 @@ errors surface as-is, there is no silent fallback to fixtures. Unlisted paths
 are unaffected, and backend-backed paths take precedence over
 `PLACEHOLDER_API_TARGET` forwarding.
 
+Docker Compose runs this way out of the box: `frontend/web/docker-compose.yml`
+defaults to `NEXT_PUBLIC_DATA_SOURCE=api` and these hybrid variables, with
+`host.docker.internal` in place of `localhost` — the container reaches the
+stack's published ports through the Docker host. See
+`frontend/web/README.md` for the Docker workflow.
+
 | Placeholder path | Gateway path | Translation |
 | --- | --- | --- |
 | `GET /automations` | `GET /api/v1/rules` | `Rule` → `Automation` |
@@ -203,7 +209,10 @@ areas and devices with their entities and current state. The home is
 `PLACEHOLDER_TWIN_HOME_ID` when set, otherwise the first home from
 `GET /api/v1/homes` — in practice the `Unassigned` sentinel home
 `00000000-0000-0000-0000-000000000001`, where auto-provisioned devices land.
-Backend errors surface as-is, like the rules hybrid.
+Backend errors surface as-is, like the rules hybrid. Docker Compose is wired
+the same way: `PLACEHOLDER_TWIN_PATHS` defaults to `/rooms,/devices,/3d/rooms`
+in `frontend/web/docker-compose.yml`, so enabling it there is one variable —
+`PLACEHOLDER_TWIN_URL=http://host.docker.internal:8084`.
 
 | Placeholder path | Twin-core endpoint | Translation |
 | --- | --- | --- |
