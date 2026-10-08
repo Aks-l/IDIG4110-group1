@@ -224,7 +224,9 @@ twin-core lacks:
 
 - Room metrics take the first entity matching each metric (`device_class` or
   name: temperature, humidity, carbon dioxide/co2, occupancy/presence); the
-  change is the delta against the entity's previous reading. Metrics without
+  change is the delta against the entity's previous reading. Values and
+  changes are rounded to two decimals — the raw subtraction carries
+  floating point noise. Metrics without
   a sensor read 0, and room activity is always empty — twin-core keeps current
   and previous state only, no history.
 - Device toggles (`PATCH /devices/:id`) are rejected with `501`: twin-core

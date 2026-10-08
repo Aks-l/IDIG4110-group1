@@ -143,13 +143,23 @@ export type TwinHomeState = {
 
 // --- twin -> frontend mapping ------------------------------------------------
 
+/**
+ * Reading values display with at most two decimals: sensors report more
+ * precision than the UI needs, and subtracting the previous reading
+ * surfaces floating point noise (19.8 - 19.5 comes out as
+ * 0.3000000000000007).
+ */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 /** Numeric value of a state; value_text counts when it parses as a number. */
 function stateValue(state?: TwinStateValue | null): number | undefined {
   if (!state) return undefined;
-  if (typeof state.value_num === 'number') return state.value_num;
+  if (typeof state.value_num === 'number') return round2(state.value_num);
   if (typeof state.value_text === 'string' && state.value_text.trim() !== '') {
     const parsed = Number(state.value_text);
-    if (Number.isFinite(parsed)) return parsed;
+    if (Number.isFinite(parsed)) return round2(parsed);
   }
   return undefined;
 }
@@ -162,10 +172,10 @@ function attributeNumber(
   if (!attributes) return undefined;
   for (const key of keys) {
     const value = attributes[key];
-    if (typeof value === 'number') return value;
+    if (typeof value === 'number') return round2(value);
     if (typeof value === 'string') {
       const parsed = Number(value);
-      if (Number.isFinite(parsed)) return parsed;
+      if (Number.isFinite(parsed)) return round2(parsed);
     }
   }
   return undefined;
@@ -203,7 +213,9 @@ function roomMetrics(entities: TwinEntityState[]): RoomMetrics {
     const value = entity ? stateValue(entity?.state) : undefined;
     if (value === undefined) continue;
     metrics[key].value = value;
-    metrics[key].change = value - (stateValue(entity?.previous) ?? value);
+    metrics[key].change = round2(
+      value - (stateValue(entity?.previous) ?? value),
+    );
   }
   return metrics;
 }
