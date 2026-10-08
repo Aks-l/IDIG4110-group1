@@ -35,7 +35,11 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 	var state dto.SensorStateEvent
 
 	if err := json.Unmarshal(msg.Payload(), &state); err != nil {
-		slog.Error("MQTT Handler", "error", err)
+		slog.Error(
+			"failed to decode MQTT sensor event",
+			"topic", msg.Topic(),
+			"error", err,
+		)
 		return
 	}
 	workerIndex := hash(state.EntityID) % len(c.workers)
@@ -43,7 +47,10 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 	select {
 	case c.workers[workerIndex] <- state:
 	default:
-		slog.Warn("MQTT Collection is full")
+		slog.Warn(
+			"MQTT Collection is full, dropping event",
+			"entityId", state.EntityID,
+			"worker", workerIndex)
 	}
 }
 
@@ -67,6 +74,10 @@ func (c *Collector) StartWorkers() {
 }
 
 func (c *Collector) Close() {
+	for _, worker := range c.workers {
+		close(worker)
+	}
+	c.wg.Wait()
 	for i := range c.workers {
 		close(c.workers[i])
 	}
