@@ -14,16 +14,15 @@ const publishTimeout = 5 * time.Second
 type SensorIngestSvcImpl struct {
 	repo      domain.SensorIngestRepo
 	publisher domain.ReadingPublisher
-	gatewayID string
 }
 
 // NewImplSensorIngestSvc stores events through repo and, when publisher is
-// not nil, publishes them as normalized readings from gatewayID.
-func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher, gatewayID string) *SensorIngestSvcImpl {
+// not nil, publishes them as normalized readings. The reading carries its own
+// gateway_id from the message; the service does not override it.
+func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher) *SensorIngestSvcImpl {
 	return &SensorIngestSvcImpl{
 		repo:      repo,
 		publisher: publisher,
-		gatewayID: gatewayID,
 	}
 }
 
