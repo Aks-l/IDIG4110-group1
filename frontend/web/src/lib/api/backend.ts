@@ -80,12 +80,12 @@ export class BackendError extends Error {
   }
 }
 
-/** Fetches JSON from the real backend, throwing BackendError on failure. */
-export async function fetchBackendJson<T>(
+/** Fetches JSON from a backend base URL, throwing BackendError on failure. */
+export async function fetchBaseJson<T>(
+  base: string,
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const base = backendUrl();
   let response: Response;
   try {
     response = await fetch(base + path, {
@@ -106,6 +106,14 @@ export async function fetchBackendJson<T>(
   }
 
   return (await response.json()) as T;
+}
+
+/** Fetches JSON from the rules backend (PLACEHOLDER_BACKEND_URL). */
+export async function fetchBackendJson<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  return fetchBaseJson(backendUrl(), path, init);
 }
 
 /** Reads the { code, message } error body the Go services return. */
