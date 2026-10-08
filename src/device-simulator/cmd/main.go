@@ -8,7 +8,6 @@ import (
 	"os"
 )
 
-
 func main() {
 	cfg, err := config.Load("config/config.yaml")
 	if err != nil {
@@ -18,7 +17,7 @@ func main() {
 	b, err := broker.Init(cfg.Mqtt)
 	if err != nil {
 		slog.Error("broker failed", "error", err)
-		os.Exit(1)	
+		os.Exit(1)
 	}
 	defer b.Close()
 
