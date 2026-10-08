@@ -14,12 +14,14 @@ func event(state string) dto.SensorStateEvent {
 	return dto.SensorStateEvent{
 		EventType: "state_changed",
 		TimeFired: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC),
-		EntityID:  "sensor.living_room_temperature",
-		NewState: dto.NewState{State: state, Attributes: map[string]string{
-			"device_class":        "temperature",
-			"unit_of_measurement": "°C",
-			"friendly_name":       "Living room temperature",
-		}},
+		Data: dto.EventData{
+			EntityID: "sensor.living_room_temperature",
+			NewState: dto.StateObject{State: state, Attributes: map[string]any{
+				"device_class":        "temperature",
+				"unit_of_measurement": "°C",
+				"friendly_name":       "Living room temperature",
+			}},
+		},
 	}
 }
 
@@ -31,7 +33,7 @@ func TestToReadingNumericState(t *testing.T) {
 	if r.GatewayID != gw || r.ExternalEntityID != "sensor.living_room_temperature" || r.Timestamp.IsZero() {
 		t.Fatalf("core fields wrong: %+v", r)
 	}
-	if r.DeviceClass == nil || *r.DeviceClass != "temperature" || r.Unit == nil || *r.Unit != "°C" {
+	if r.DeviceClass != "temperature" || r.Unit != "°C" {
 		t.Fatalf("device_class/unit not lifted out of attributes: %+v", r)
 	}
 	if r.Attributes["friendly_name"] != "Living room temperature" || r.Attributes["device_class"] != nil {

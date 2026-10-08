@@ -53,11 +53,11 @@ func (s *SensorIngestSvcImpl) Create(ctx context.Context, payload dto.SensorStat
 func ToReading(gatewayID string, ev dto.SensorStateEvent) dto.Reading {
 	r := dto.Reading{
 		GatewayID:        gatewayID,
-		ExternalEntityID: ev.EntityID,
+		ExternalEntityID: ev.Data.EntityID,
 		Timestamp:        ev.TimeFired,
 	}
 
-	state := strings.TrimSpace(ev.NewState.State)
+	state := strings.TrimSpace(ev.Data.NewState.State)
 	if f, err := strconv.ParseFloat(state, 64); err == nil {
 		r.ValueNum = &f
 	} else {
@@ -65,12 +65,16 @@ func ToReading(gatewayID string, ev dto.SensorStateEvent) dto.Reading {
 	}
 
 	attributes := map[string]any{}
-	for k, v := range ev.NewState.Attributes {
+	for k, v := range ev.Data.NewState.Attributes {
 		switch k {
 		case "device_class":
-			r.DeviceClass = &v
+			if s, ok := v.(string); ok {
+				r.DeviceClass = s
+			}
 		case "unit_of_measurement":
-			r.Unit = &v
+			if s, ok := v.(string); ok {
+				r.Unit = s
+			}
 		default:
 			attributes[k] = v
 		}
