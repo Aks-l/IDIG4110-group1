@@ -96,11 +96,11 @@ export const mockRooms: Record<string, RoomData> = {
       occupancy: { value: 2, change: 1 },
     },
     devices: [
-      { id: '1', name: 'Ceiling Light', type: 'Light', on: true },
+      { id: '1', name: 'Ceiling Light', type: 'Light', on: true, firmware: '1.4.2', lastSeen: '2026-10-07T14:30:00Z', installedAt: '2026-01-15T10:00:00Z' },
       { id: '2', name: 'Floor Lamp', type: 'Light', on: false },
       { id: '3', name: 'Thermostat', type: 'Climate', on: true },
       { id: '4', name: 'Smart TV', type: 'Media', on: false },
-      { id: '5', name: 'Window Sensor', type: 'Sensor', on: true },
+      { id: '5', name: 'Window Sensor', type: 'Sensor', on: true, battery: 85, signal: 92 },
     ],
     activity: [
       { id: '1', timestamp: '2026-09-15T14:32:00', description: 'Window closed' },
@@ -118,10 +118,10 @@ export const mockRooms: Record<string, RoomData> = {
       occupancy: { value: 1, change: -1 },
     },
     devices: [
-      { id: '1', name: 'Oven', type: 'Appliance', on: true },
-      { id: '2', name: 'Fridge', type: 'Appliance', on: true },
+      { id: '1', name: 'Oven', type: 'Appliance', on: true, firmware: '1.0.0', lastSeen: '2026-10-07T14:30:00Z', installedAt: '2026-01-15T10:00:00Z' },
+      { id: '2', name: 'Fridge', type: 'Appliance', on: true, firmware: '1.2.0', lastSeen: '2026-10-07T14:30:00Z', installedAt: '2026-01-15T10:00:00Z' },
       { id: '3', name: 'Toaster', type: 'Appliance', on: false },
-      { id: '5', name: 'Ceiling Light', type: 'Light', on: true },
+      { id: '5', name: 'Ceiling Light', type: 'Light', on: true, firmware: '1.4.2', lastSeen: '2026-10-07T14:30:00Z', installedAt: '2026-01-15T10:00:00Z' },
       { id: '6', name: 'Airfryer', type: 'Appliance', on: true },
       { id: '7', name: 'Microwave', type: 'Appliance', on: true },
       { id: '8', name: 'Door Sensor', type: 'Sensor', on: true },
