@@ -14,17 +14,17 @@ import (
 const (
 	insertReadingQuery = `
 		INSERT INTO ingest.readings (
-			time, gateway_id, external_entity_id, device_class,
+			time, gateway_id, external_entity_id, event_id, device_class,
 			value_num, value_text, unit, attributes
 		)
-		VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8)
+		VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8, $9)
 	`
 	insertRawMessageQuery = `
 		INSERT INTO ingest.raw_messages (time, gateway_id, topic, payload)
 		VALUES ($1, $2::uuid, $3, $4)
 	`
 	findReadingsByTimeRange = `
-		SELECT time, gateway_id, external_entity_id, device_class, value_num, value_text, unit
+		SELECT time, gateway_id, external_entity_id, event_id, device_class, value_num, value_text, unit
 		FROM ingest.readings
 		WHERE external_entity_id = $1
 			AND ($2::timestamptz IS NULL OR time >= $2::timestamptz)
@@ -32,13 +32,14 @@ const (
 		ORDER BY time ASC
 	`
 	findSensorsQuery = `
-		SELECT external_entity_id, device_class, unit,
+		SELECT event_id, external_entity_id, device_class, unit,
 			MAX(time) AS last_seen,
 			COUNT(*) AS reading_count
 		FROM ingest.readings
-		WHERE ($1::text IS NULL OR external_entity_id = $1)
-		GROUP BY external_entity_id, device_class, unit
-		ORDER BY external_entity_id
+		WHERE event_id IS NOT NULL
+			AND ($1::text IS NULL OR event_id::text = $1)
+		GROUP BY event_id, external_entity_id, device_class, unit
+		ORDER BY event_id
 	`
 )
 
@@ -64,6 +65,7 @@ func (r *SensorIngestRepoImpl) InsertReading(ctx context.Context, reading dto.Re
 		reading.Timestamp,
 		reading.GatewayID,
 		reading.ExternalEntityID,
+		reading.EventID,
 		reading.DeviceClass,
 		reading.ValueNum,
 		reading.ValueText,
@@ -113,6 +115,7 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 			&reading.Timestamp,
 			&reading.GatewayID,
 			&reading.ExternalEntityID,
+			&reading.EventID,
 			&reading.DeviceClass,
 			&reading.ValueNum,
 			&reading.ValueText,
@@ -144,6 +147,7 @@ func (r *SensorIngestRepoImpl) FindSensors(ctx context.Context, sensorID *string
 		var sensor domain.Sensor
 
 		if err := rows.Scan(
+			&sensor.SensorID,
 			&sensor.ExternalEntityID,
 			&sensor.DeviceClass,
 			&sensor.Unit,

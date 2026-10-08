@@ -33,7 +33,7 @@ func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
 
 func (s *Simulator) Start() {
 	for i := 0; i < s.deviceCount; i++ {
-		entityID := fmt.Sprintf("b%015d", i+1)
+		entityID := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
 		go s.run(entityID)
 	}
 	select {}
