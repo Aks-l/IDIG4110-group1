@@ -25,12 +25,12 @@ var ErrConflict = errors.New("conflict")
 
 // Write path, applies one normalized reading to twin_state
 type TwinStateRepo interface {
-	ApplyReading(ctx context.Context, reading dto.NormalizedReading) error
+	ApplyReading(ctx context.Context, reading dto.Reading) error
 }
 
 // Validates readings and applies them
 type TwinStateSvc interface {
-	ApplyReading(ctx context.Context, reading dto.NormalizedReading) error
+	ApplyReading(ctx context.Context, reading dto.Reading) error
 }
 
 // Read path behind the frontend API

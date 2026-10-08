@@ -38,7 +38,7 @@ func handleReadings(svc domain.TwinStateSvc) http.HandlerFunc {
 //   - r [*http.Request] incoming request
 //   - svc [domain.TwinStateSvc] twin state service
 func applyReading(w http.ResponseWriter, r *http.Request, svc domain.TwinStateSvc) {
-	reading, ok := decodeBody[dto.NormalizedReading](w, r)
+	reading, ok := decodeBody[dto.Reading](w, r)
 	if !ok {
 		return
 	}

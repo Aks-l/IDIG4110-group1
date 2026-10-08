@@ -166,12 +166,12 @@ func NewTwinStateRepoImpl(db *db.Database) *TwinStateRepoImpl {
 // # Inputs:
 //
 //   - ctx [context.Context] request context
-//   - reading [dto.NormalizedReading] the reading to apply
+//   - reading [dto.Reading] the reading to apply
 //
 // # Returns:
 //
 //   - Error on resolve, provision or upsert failure
-func (r *TwinStateRepoImpl) ApplyReading(ctx context.Context, reading dto.NormalizedReading) error {
+func (r *TwinStateRepoImpl) ApplyReading(ctx context.Context, reading dto.Reading) error {
 	tx, err := r.db.Conn.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -206,13 +206,13 @@ func (r *TwinStateRepoImpl) ApplyReading(ctx context.Context, reading dto.Normal
 //
 //   - ctx [context.Context] request context
 //   - tx [pgx.Tx] transaction
-//   - reading [dto.NormalizedReading] the reading being applied
+//   - reading [dto.Reading] the reading being applied
 //
 // # Returns:
 //
 //   - New entity id
 //   - Error on failure
-func (r *TwinStateRepoImpl) provisionEntity(ctx context.Context, tx pgx.Tx, reading dto.NormalizedReading) (string, error) {
+func (r *TwinStateRepoImpl) provisionEntity(ctx context.Context, tx pgx.Tx, reading dto.Reading) (string, error) {
 	if _, err := tx.Exec(ctx, ensureDefaultHomeQuery, domain.DefaultHomeID); err != nil {
 		return "", fmt.Errorf("ensure default home: %w", err)
 	}
@@ -235,7 +235,7 @@ func (r *TwinStateRepoImpl) provisionEntity(ctx context.Context, tx pgx.Tx, read
 	return entityID, nil
 }
 
-func (r *TwinStateRepoImpl) ensureDevice(ctx context.Context, tx pgx.Tx, reading dto.NormalizedReading) (string, error) {
+func (r *TwinStateRepoImpl) ensureDevice(ctx context.Context, tx pgx.Tx, reading dto.Reading) (string, error) {
 	var deviceID string
 	err := tx.QueryRow(
 		ctx,
@@ -255,7 +255,7 @@ func (r *TwinStateRepoImpl) ensureDevice(ctx context.Context, tx pgx.Tx, reading
 	return deviceID, nil
 }
 
-func (r *TwinStateRepoImpl) ensureEntity(ctx context.Context, tx pgx.Tx, deviceID string, reading dto.NormalizedReading) (string, error) {
+func (r *TwinStateRepoImpl) ensureEntity(ctx context.Context, tx pgx.Tx, deviceID string, reading dto.Reading) (string, error) {
 	var deviceClass *string
 	if reading.DeviceClass != "" {
 		deviceClass = &reading.DeviceClass
@@ -554,12 +554,12 @@ func scanEntityState(row scanner) (domain.EntityState, error) {
 //
 // # Inputs:
 //
-//   - reading [dto.NormalizedReading] reading with attributes
+//   - reading [dto.Reading] reading with attributes
 //
 // # Returns:
 //
 //   - Attributes map or nil for jsonb NULL
-func attributesParam(reading dto.NormalizedReading) any {
+func attributesParam(reading dto.Reading) any {
 	if len(reading.Attributes) == 0 {
 		return nil
 	}
@@ -570,12 +570,12 @@ func attributesParam(reading dto.NormalizedReading) any {
 //
 // # Inputs:
 //
-//   - reading [dto.NormalizedReading] reading with attributes
+//   - reading [dto.Reading] reading with attributes
 //
 // # Returns:
 //
 //   - friendly_name when set, else external_entity_id
-func entityName(reading dto.NormalizedReading) string {
+func entityName(reading dto.Reading) string {
 	if name, ok := reading.Attributes["friendly_name"].(string); ok && strings.TrimSpace(name) != "" {
 		return domain.TruncateRunes(name, 255)
 	}

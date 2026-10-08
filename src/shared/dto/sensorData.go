@@ -3,7 +3,7 @@ package dto
 import "time"
 
 // Home Assistant state_changed event, raw gateway payload
-// ingest translates it into NormalizedReading
+// ingest translates it into Reading
 type SensorStateEvent struct {
 	EventType string       `json:"event_type"` // "state_changed" for these events
 	TimeFired time.Time    `json:"time_fired"` // when the hub fired the event
