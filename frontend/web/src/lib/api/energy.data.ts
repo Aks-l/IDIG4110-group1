@@ -417,3 +417,10 @@ export function loadEnergy(
   }
   return getEnergy(period, mode);
 }
+
+// Shared with the /api/energy placeholder route (src/app/api/energy/route.ts),
+// which serves these fixtures until the real backend provides the endpoint.
+export const mockEnergy: Record<EnergyMode, Record<EnergyPeriod, EnergyPageData>> = {
+  current: actualByPeriod,
+  projected: projectedByPeriod,
+};

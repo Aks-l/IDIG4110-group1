@@ -1,5 +1,9 @@
 import { loadOverview } from '@/lib/api/overview.data';
 
+// The overview is fetched over HTTP at request time. Without this, Next.js
+// would try to prerender the page during `next build`, when no API is up.
+export const dynamic = 'force-dynamic';
+
 export default async function OverviewPage() {
   const { stats, devices } = await loadOverview();
 
