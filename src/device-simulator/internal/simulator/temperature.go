@@ -2,8 +2,8 @@ package simulator
 
 import (
 	"IDIG4110/shared/dto"
-	"crypto/rand"
 	"fmt"
+	"math/rand"
 	"time"
 )
 

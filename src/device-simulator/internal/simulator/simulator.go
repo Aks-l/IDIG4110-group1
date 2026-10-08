@@ -37,9 +37,13 @@ func (s *Simulator) Start() {
 }
 
 func (s *Simulator) run(id string) {
+	sensor := NewTemperatureSensor(id)
+
 	for {
-		mock := GenerateMockData(id)
-		payload, err := json.Marshal(mock)
+		event := sensor.Generate()
+		//mock := GenerateMockData(id)
+
+		payload, err := json.Marshal(event)
 		if err != nil {
 			slog.Error("JSON marshal failed",
 				"devicedID", id,
