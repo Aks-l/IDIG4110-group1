@@ -4,57 +4,41 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 
 	"IDIG4110/shared/dto"
 )
 
-// Builds one HA state_changed event for a simulated temperature entity
-//
-// # Inputs:
-//
-//   - entityID [string] simulated entity id
-//
-// # Returns:
-//
-//   - Sensor state event
-func GenerateMockData(entityID string) dto.SensorStateEvent {
-	now := time.Now()
-	state := strconv.FormatFloat(18+rand.Float64()*8, 'f', 1, 64)
-	contextID := newContextID()
+const (
+	minTemperature = 18.0
+	maxTemperature = 24.0
+)
 
-	return dto.SensorStateEvent{
+// NextTemperature performs a bounded random walk from the current temperature
+func NextTemperature(current float64) float64 {
+	next := current + (rand.Float64()-0.5)*0.8
+	if next < minTemperature {
+		next = minTemperature
+	}
+	if next > maxTemperature {
+		next = maxTemperature
+	}
+	return next
+}
+
+// GenerateMockData generates a device-native state event with a string state
+func GenerateMockData(entityID string, temperature float64) dto.StateEvent {
+	return dto.StateEvent{
 		EventType: "state_changed",
-		TimeFired: now,
-		Data: dto.EventData{
-			EntityID: entityID,
-			NewState: dto.StateObject{
-				EntityID: entityID,
-				State:    state,
-				Attributes: map[string]any{
-					"device_class":        "temperature",
-					"unit_of_measurement": "°C",
-					"friendly_name":       friendlyName(entityID),
-				},
-				LastChanged: now,
-				LastUpdated: now,
-				Context:     dto.EventContext{ID: contextID},
+		TimeFired: time.Now(),
+		EntityID:  entityID,
+		NewState: dto.NewState{
+			State: strconv.FormatFloat(temperature, 'f', 1, 64),
+			Attributes: map[string]string{
+				"device_class":        "temperature",
+				"unit_of_measurement": "°C",
+				"friendly_name":       fmt.Sprintf("Simulated temperature sensor %s", entityID),
 			},
 		},
-		Context: dto.EventContext{ID: contextID},
 	}
-}
-
-// Builds HA style context id, 32 hex characters
-//
-// # Returns:
-//
-//   - Random context id
-func newContextID() string {
-	return fmt.Sprintf("%016x%016x", rand.Uint64(), rand.Uint64())
-}
-
-func friendlyName(entityID string) string {
-	return strings.ReplaceAll(strings.TrimPrefix(entityID, "sensor."), "_", " ")
 }

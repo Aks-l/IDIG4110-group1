@@ -11,13 +11,13 @@ type Reading struct {
 	ExternalEntityID string    `json:"external_entity_id" validate:"required,max=255"` // identifier for the thing being read, verbatim from the source
 	Timestamp        time.Time `json:"timestamp" validate:"required"`                  // RFC 3339, when the event happened
 
-	// Extended.
-	EventID     string         `json:"event_id,omitempty"`     // the source's unique id for this event; dedup key
-	ValueNum    *float64       `json:"value_num"`              // set when the reading is numeric
-	ValueText   *string        `json:"value_text"`             // set when the reading is a state or any non-numeric value
-	DeviceClass string         `json:"device_class,omitempty"` // what kind of quantity or state this is
-	Unit        string         `json:"unit,omitempty"`         // unit of measurement for numeric readings
-	Attributes  map[string]any `json:"attributes,omitempty"`   // extra source-specific detail, preserved verbatim
+	// Extended. Nullable, null means not known for this reading.
+	EventID     *string        `json:"event_id"`             // the source's unique id for this event; dedup key
+	ValueNum    *float64       `json:"value_num"`            // set when the reading is numeric
+	ValueText   *string        `json:"value_text"`           // set when the reading is a state or any non-numeric value
+	DeviceClass *string        `json:"device_class"`         // what kind of quantity or state this is
+	Unit        *string        `json:"unit"`                 // unit of measurement for numeric readings
+	Attributes  map[string]any `json:"attributes,omitempty"` // extra source-specific detail, preserved verbatim
 }
 
 // Key identifies the entity a reading belongs to. Entity ids are only unique

@@ -188,14 +188,7 @@ func (r *TwinStateRepoImpl) ensureDevice(ctx context.Context, tx pgx.Tx, reading
 //   - Entity id
 //   - Error on failure
 func (r *TwinStateRepoImpl) ensureEntity(ctx context.Context, tx pgx.Tx, deviceID, homeID string, reading dto.Reading) (string, error) {
-	var deviceClass *string
-	if reading.DeviceClass != "" {
-		deviceClass = &reading.DeviceClass
-	}
-	var unit *string
-	if reading.Unit != "" {
-		unit = &reading.Unit
-	}
+	deviceClass, unit := reading.DeviceClass, reading.Unit
 
 	var entityID string
 	err := tx.QueryRow(

@@ -97,7 +97,7 @@ func Run() error {
 		}()
 	}
 
-	router := NewRouter()
+	router := NewRouter(sensorIngestSvc)
 
 	httpServer := http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

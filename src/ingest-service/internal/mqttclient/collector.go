@@ -12,15 +12,15 @@ import (
 )
 
 type Collector struct {
-	workers []chan dto.SensorStateEvent
+	workers []chan dto.RawMessage
 	svc     domain.SensorIngestSvc
 }
 
 func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Collector {
-	w := make([]chan dto.SensorStateEvent, workerCount)
+	w := make([]chan dto.RawMessage, workerCount)
 
 	for i := range w {
-		w[i] = make(chan dto.SensorStateEvent, bufferSize)
+		w[i] = make(chan dto.RawMessage, bufferSize)
 	}
 
 	return &Collector{
@@ -30,16 +30,21 @@ func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Coll
 }
 
 func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
-	var state dto.SensorStateEvent
+	var raw dto.RawMessage
 
-	if err := json.Unmarshal(msg.Payload(), &state); err != nil {
-		slog.Error("MQTT Handler", "error", err)
+	if err := json.Unmarshal(msg.Payload(), &raw); err != nil {
+		slog.Error("MQTT Handler", "error", err, "topic", msg.Topic())
 		return
 	}
-	workerIndex := hash(state.Data.EntityID) % len(c.workers)
+
+	if err := c.svc.CreateRaw(context.Background(), raw); err != nil {
+		slog.Error("Failed to store raw message", "error", err, "topic", raw.Topic)
+	}
+
+	workerIndex := hash(raw.Topic) % len(c.workers)
 
 	select {
-	case c.workers[workerIndex] <- state:
+	case c.workers[workerIndex] <- raw:
 	default:
 		slog.Warn("MQTT Collection is full")
 	}
@@ -47,9 +52,9 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 
 func (c *Collector) StartWorkers() {
 	for i, ch := range c.workers {
-		go func(entityID int, queue chan dto.SensorStateEvent) {
-			for state := range queue {
-				if err := c.svc.Create(context.Background(), state); err != nil {
+		go func(entityID int, queue chan dto.RawMessage) {
+			for raw := range queue {
+				if err := c.svc.Create(context.Background(), raw); err != nil {
 					slog.Error("Failed to create sensor object", "error", err)
 				}
 			}
