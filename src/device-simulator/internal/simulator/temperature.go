@@ -5,19 +5,8 @@ import (
 )
 
 const (
-	//min, max, and max change values for the simulated temperature sensor
-	MinTemperature = 10.0
-	MaxTemperature = 50.0
-	MaxTempChange  = 0.3
-)
-
-package simulator
-
-import "math/rand"
-
-const (
-	minTemperature = 16.0
-	maxTemperature = 28.0
+	minTemperature    = 16.0
+	maxTemperature    = 28.0
 	targetTemperature = 21.0
 
 	// How strongly the temperature moves back toward the target.
