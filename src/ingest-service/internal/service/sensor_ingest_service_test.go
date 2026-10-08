@@ -2,18 +2,23 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"IDIG4110/shared/dto"
 )
 
-const gw = "11111111-1111-1111-1111-111111111111"
+const (
+	gw      = "11111111-1111-1111-1111-111111111111"
+	eventID = "326ef27d19415c60c492fe330945f954"
+)
 
 func event(state string) dto.SensorStateEvent {
 	return dto.SensorStateEvent{
 		EventType: "state_changed",
 		TimeFired: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC),
+		Context:   dto.EventContext{ID: eventID},
 		Data: dto.EventData{
 			EntityID: "sensor.living_room_temperature",
 			NewState: dto.StateObject{State: state, Attributes: map[string]any{
@@ -32,6 +37,9 @@ func TestToReadingNumericState(t *testing.T) {
 	}
 	if r.GatewayID != gw || r.ExternalEntityID != "sensor.living_room_temperature" || r.Timestamp.IsZero() {
 		t.Fatalf("core fields wrong: %+v", r)
+	}
+	if r.EventID != eventID {
+		t.Fatalf("event_id not carried from context.id: %+v", r)
 	}
 	if r.DeviceClass != "temperature" || r.Unit != "°C" {
 		t.Fatalf("device_class/unit not lifted out of attributes: %+v", r)
@@ -76,6 +84,22 @@ func TestCreateWithoutPublisher(t *testing.T) {
 	repo := &fakeRepo{}
 	if err := NewImplSensorIngestSvc(repo, nil, gw).Create(context.Background(), event("22")); err != nil {
 		t.Fatal(err)
+	}
+	if repo.inserted != 1 {
+		t.Fatal("event not stored")
+	}
+}
+
+type failingPublisher struct{}
+
+func (failingPublisher) PublishReading(_ context.Context, _ dto.Reading) error {
+	return errors.New("kafka down")
+}
+
+func TestCreateSurvivesPublishFailure(t *testing.T) {
+	repo := &fakeRepo{}
+	if err := NewImplSensorIngestSvc(repo, failingPublisher{}, gw).Create(context.Background(), event("22")); err != nil {
+		t.Fatalf("a stored event must survive a publish failure: %v", err)
 	}
 	if repo.inserted != 1 {
 		t.Fatal("event not stored")
