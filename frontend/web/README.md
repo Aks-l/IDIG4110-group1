@@ -28,10 +28,13 @@ are needed. See `docs/frontend/api.md` for the full contract.
 
 The endpoints the backend already implements can also be served from it while
 the rest stay on fixtures (hybrid mode): set
-`PLACEHOLDER_BACKEND_URL=http://localhost:8084` and
+`PLACEHOLDER_BACKEND_URL=http://localhost:8083` and
 `PLACEHOLDER_BACKEND_PATHS=/automations,/events`, and `/automations` plus
-`/events` are fetched from the api-gateway and translated onto the frontend
-contract. `docs/frontend/api.md` documents the per-endpoint details.
+`/events` are fetched from the rules-engine and translated onto the frontend
+contract. The twin-core scaffold adds a second hybrid for
+`/rooms,/devices,/3d/rooms` via `PLACEHOLDER_TWIN_URL` and
+`PLACEHOLDER_TWIN_PATHS`. `docs/frontend/api.md` documents the per-endpoint
+details of both.
 
 Then rebuild the image:
 

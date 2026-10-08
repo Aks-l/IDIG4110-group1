@@ -44,7 +44,8 @@ frontend/web/src/lib/api/
 ├── energy.data.ts        Energy data-source adapter
 ├── placeholder-handler.ts  Placeholder route plumbing: fixtures or proxy
 ├── placeholder-store.ts    In-memory state behind the placeholder routes
-└── backend.ts              Hybrid mode: gateway calls and Rule/Incident mapping
+├── backend.ts              Rules hybrid: backend calls and Rule/Incident mapping
+└── twin.ts                 Twin hybrid: twin-core state calls and mapping
 
 frontend/web/src/app/api/
 └── Placeholder route handlers, one folder per endpoint (rooms, devices,
@@ -183,6 +184,57 @@ differ:
   sensor). Device actions become `domain.entity` ids with the domain guessed
   from the device name; motion conditions become
   `binary_sensor.<location>_motion`.
+
+### Hybrid: twin-core-backed paths
+
+The twin-core scaffold on `47-scaffold-twin-core-service` (documented in
+`docs/architecture/twin-state-api.md`) serves the structural model (homes,
+areas, devices, entities, relations) and `twin_state`, the latest known value
+per entity. A second hybrid mode serves the placeholder paths it can back,
+again config-only:
+
+```env
+PLACEHOLDER_TWIN_URL=http://localhost:8084
+PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms
+```
+
+Everything reads one dashboard view, `GET /api/v1/homes/{home_id}/state`:
+areas and devices with their entities and current state. The home is
+`PLACEHOLDER_TWIN_HOME_ID` when set, otherwise the first home from
+`GET /api/v1/homes` — in practice the `Unassigned` sentinel home
+`00000000-0000-0000-0000-000000000001`, where auto-provisioned devices land.
+Backend errors surface as-is, like the rules hybrid.
+
+| Placeholder path | Twin-core endpoint | Translation |
+| --- | --- | --- |
+| `GET /rooms`, `GET /rooms/:id` | `GET /api/v1/homes/{home_id}/state` | areas → `RoomData` |
+| `GET /devices`, `GET /devices/:id` | `GET /api/v1/homes/{home_id}/state` | devices + entities → `Device` |
+| `GET /3d/rooms` | `GET /api/v1/homes/{home_id}/state` | area geometry → `RoomLayout` |
+
+The mapping lives in `src/lib/api/twin.ts` and is honest about what the
+scaffold lacks:
+
+- Room metrics take the first entity matching each metric (`device_class` or
+  name: temperature, humidity, carbon dioxide/co2, occupancy/presence); the
+  change is the delta against the entity's previous reading. Metrics without
+  a sensor read 0, and room activity is always empty — twin-core keeps current
+  and previous state only, no history.
+- Device toggles (`PATCH /devices/:id`) are rejected with `501`: the scaffold
+  has no command endpoint, and `POST /api/v1/readings` is the ingest path, not
+  a device command.
+- Devices without a controllable entity read as off; `installedAt` and
+  `position` have no backend source and are omitted. Battery can come from a
+  battery entity or the `battery` attribute; signal from the `signal`,
+  `rssi`, or `linkquality` attributes; `lastSeen` is the newest
+  `state.updated_at` of the device's entities.
+- `GET /3d/rooms` reads `position` and `size` triples from the area's
+  free-form `geometry` when present, and otherwise falls back to a
+  deterministic grid.
+
+The scaffold branch is not merged yet: its compose publishes twin-core on
+host port `8084` (and removes the api-gateway, which owns `8084` in this
+branch's compose). Until the branches merge, point `PLACEHOLDER_TWIN_URL` at
+a twin-core built from that branch, or at a stub for testing the mapping.
 
 ## Endpoint Modules
 
