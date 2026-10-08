@@ -10,7 +10,9 @@ type StateEvent struct {
 	NewState  NewState  `json:"new_state"`
 }
 
+// NewState carries the state value and its attributes. Attributes are
+// preserved verbatim, so values can be any JSON type, not only strings.
 type NewState struct {
-	State      string            `json:"state"`
-	Attributes map[string]string `json:"attributes"`
+	State      string         `json:"state"`
+	Attributes map[string]any `json:"attributes"`
 }

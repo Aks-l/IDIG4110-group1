@@ -34,7 +34,7 @@ func GenerateMockData(entityID string, temperature float64) dto.StateEvent {
 		EntityID:  entityID,
 		NewState: dto.NewState{
 			State: strconv.FormatFloat(temperature, 'f', 1, 64),
-			Attributes: map[string]string{
+			Attributes: map[string]any{
 				"device_class":        "temperature",
 				"unit_of_measurement": "°C",
 				"friendly_name":       fmt.Sprintf("Simulated temperature sensor %s", entityID),
