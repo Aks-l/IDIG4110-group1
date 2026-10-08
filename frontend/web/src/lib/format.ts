@@ -1,3 +1,8 @@
+import type {
+  AutomationAction,
+  AutomationCondition,
+  DayOfWeek,
+} from '@/lib/api/types';
 
 /**
  * Format an ISO timestamp as HH:MM in UTC.
@@ -20,4 +25,41 @@ export function formatDate(iso: string): string {
     month: 'short',
     timeZone: 'UTC',
   });
+}
+
+const DAY_LABELS: Record<DayOfWeek, string> = {
+  mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
+};
+
+const OP_LABELS = { lt: 'below', gt: 'above', eq: 'at' } as const;
+
+export function describeCondition(c: AutomationCondition): string {
+  switch (c.kind) {
+    case 'time':
+      return `Between ${c.from} and ${c.to}`;
+    case 'day':
+      return c.days.length === 0
+        ? 'Any day'
+        : `On ${c.days.map((d) => DAY_LABELS[d]).join(', ')}`;
+    case 'temperature':
+      return `Temperature ${OP_LABELS[c.op]} ${c.value}°C`;
+    case 'motion':
+      return `Motion in ${c.location || '—'}`;
+    case 'presence':
+      return c.state === 'home' ? 'Someone is home' : 'Nobody is home';
+  }
+}
+
+export function describeAction(a: AutomationAction): string {
+  switch (a.kind) {
+    case 'device': {
+      if (a.command === 'turn_on')  return `Turn on ${a.deviceName || '—'}`;
+      if (a.command === 'turn_off') return `Turn off ${a.deviceName || '—'}`;
+      return `Set ${a.deviceName || '—'} to ${a.value || '—'}`;
+    }
+    case 'notify':
+      return `Notify: "${a.message || '—'}"`;
+    case 'delay':
+      return `Wait ${a.minutes} min`;
+  }
 }

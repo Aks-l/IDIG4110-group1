@@ -7,6 +7,7 @@ import { Modal } from '@/components/Modal';
 import { AutomationForm } from '@/components/automations/AutomationForm';
 import { loadAutomations, createAutomation, setAutomationState } from '@/lib/api/automations.data';
 import type { Automation, AutomationDraft } from '@/lib/api/types';
+import { describeAction, describeCondition } from '@/lib/format';
 
 // --- Helper ---
 
@@ -98,38 +99,65 @@ export default function AutomationsPage() {
       <section className="space-y-3">
         <ul className="space-y-2">
           {automations.map((a) => (
-            <li
-              key={a.id}
-              className="panel flex items-center gap-4 px-4 py-3"
-            >
-              {/* Left: name, description, meta */}
-              <div className="flex flex-1 flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{a.name}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      categoryStyles[a.category]
-                    }`}
-                  >
-                    {a.category}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-500">{a.description}</span>
-                <span className="mt-1 text-xs text-gray-400">
-                  {a.lastRun ? `Last run: ${timeAgo(a.lastRun)}` : 'Never run'}
-                  {' · '}
-                  {a.runCount} runs
+          <li key={a.id} className="panel flex items-start gap-4 px-4 py-3">
+            {/* Toggle */}
+            <Toggle
+              checked={a.enabled}
+              onChange={() => toggle(a.id)}
+              label={a.enabled ? 'Disable automation' : 'Enable automation'}
+            />
+
+            {/* Body */}
+            <div className="flex flex-1 flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-[#17221d]">{a.name}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${categoryStyles[a.category]}`}
+                >
+                  {a.category}
                 </span>
               </div>
 
-              {/* Right: toggle */}
-              <Toggle
-                checked={a.enabled}
-                onChange={() => toggle(a.id)}
-                label={a.enabled ? 'Disable automation' : 'Enable automation'}
-              />
-            </li>
-          ))}
+              {a.description && (
+                <span className="text-sm text-[#68766d]">{a.description}</span>
+              )}
+
+              {/* IF / DO summary */}
+              <div className="flex flex-col gap-1 text-xs text-[#68766d]">
+                {a.conditions.length > 0 && (
+                  <div className="flex gap-2">
+                    <span className="w-8 shrink-0 font-semibold uppercase tracking-wide text-[#1f6f5b]">
+                      IF
+                    </span>
+                    <ul className="space-y-0.5">
+                      {a.conditions.map((c, i) => (
+                        <li key={i}>{describeCondition(c)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {a.actions.length > 0 && (
+                  <div className="flex gap-2">
+                    <span className="w-8 shrink-0 font-semibold uppercase tracking-wide text-[#1f6f5b]">
+                      
+                    </span>
+                    <ul className="space-y-0.5">
+                      {a.actions.map((act, i) => (
+                        <li key={i}>{describeAction(act)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <span className="text-xs text-[#9aa89f]">
+                {a.lastRun ? `Last run: ${timeAgo(a.lastRun)}` : 'Never run'}
+                {' · '}
+                {a.runCount} runs
+              </span>
+            </div>
+          </li>
+            ))}
         </ul>
 
         {automations.length === 0 && (

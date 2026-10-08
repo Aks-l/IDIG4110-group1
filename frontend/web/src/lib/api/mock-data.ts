@@ -1,5 +1,90 @@
 import type { Automation, Event, RoomData, Projection } from './types';
 
+export const mockAutomations: Automation[] = [
+  {
+    id: '1',
+    name: 'Hallway motion light',
+    description: 'Turn on the hallway light when someone walks in at night',
+    category: 'Comfort',
+    enabled: true,
+    lastRun: '2026-10-07T22:30:00Z',
+    runCount: 128,
+    conditions: [
+      { kind: 'motion', location: 'Hallway' },
+      { kind: 'time', from: '18:00', to: '06:00' },
+    ],
+    actions: [
+      { kind: 'device', deviceName: 'Hallway Light', command: 'set', value: '40%' },
+    ],
+  },
+  {
+    id: '2',
+    name: 'Good Morning',
+    description: 'Wake the house up on weekday mornings',
+    category: 'Comfort',
+    enabled: true,
+    lastRun: '2026-10-07T07:00:00Z',
+    runCount: 62,
+    conditions: [
+      { kind: 'time', from: '07:00', to: '07:15' },
+      { kind: 'day', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
+      { kind: 'presence', state: 'home' },
+    ],
+    actions: [
+      { kind: 'device', deviceName: 'Living Room Lights', command: 'turn_on' },
+      { kind: 'device', deviceName: 'Thermostat', command: 'set', value: '22°C' },
+    ],
+  },
+  {
+    id: '3',
+    name: 'Away Mode',
+    description: 'Secure the house when everyone leaves',
+    category: 'Security',
+    enabled: false,
+    lastRun: '2026-10-06T18:12:00Z',
+    runCount: 12,
+    conditions: [
+      { kind: 'presence', state: 'away' },
+    ],
+    actions: [
+      { kind: 'device', deviceName: 'Front Door', command: 'set', value: 'locked' },
+      { kind: 'device', deviceName: 'All Lights', command: 'turn_off' },
+      { kind: 'notify', message: 'Away mode activated' },
+    ],
+  },
+  {
+    id: '4',
+    name: 'Energy saver',
+    description: 'Turn off lights when nobody is around',
+    category: 'Energy',
+    enabled: true,
+    lastRun: '2026-10-07T13:45:00Z',
+    runCount: 47,
+    conditions: [
+      { kind: 'motion', location: 'Living Room' },
+      { kind: 'time', from: '09:00', to: '17:00' },
+    ],
+    actions: [
+      { kind: 'delay', minutes: 30 },
+      { kind: 'device', deviceName: 'Living Room Lights', command: 'turn_off' },
+    ],
+  },
+  {
+    id: '5',
+    name: 'Cold weather alert',
+    description: 'Heads-up when it gets cold outside',
+    category: 'Notification',
+    enabled: true,
+    lastRun: '2026-10-07T06:00:00Z',
+    runCount: 5,
+    conditions: [
+      { kind: 'temperature', op: 'lt', value: 15 },
+    ],
+    actions: [
+      { kind: 'notify', message: 'Outside temperature dropped below 15°C' },
+    ],
+  },
+];
 export const mockRooms: Record<string, RoomData> = {
   'living-room': {
     id: 'living-room',
@@ -87,14 +172,6 @@ export const mockRooms: Record<string, RoomData> = {
   },
 };
 
-export const mockAutomations: Automation[] = [
-  { id: '1', name: 'Hallway motion light', description: 'Motion in Hallway: turn on Hallway Light at 40%', category: 'Comfort', enabled: true, lastRun: '2026-09-15T14:30:00', runCount: 128 },
-  { id: '2', name: 'Good Morning', description: '07:00 weekdays: lights on, thermostat 22°C', category: 'Comfort', enabled: true, lastRun: '2026-09-15T07:00:00', runCount: 62 },
-  { id: '3', name: 'Away Mode', description: 'Nobody home: lock doors, cameras on, lights off', category: 'Security', enabled: false, lastRun: '2026-09-14T18:12:00', runCount: 12 },
-  { id: '4', name: 'Energy saver', description: 'No motion for 30 min: turn off all lights', category: 'Energy', enabled: true, lastRun: '2026-09-15T13:45:00', runCount: 47 },
-  { id: '5', name: 'Faucet leak alert', description: 'Faucet running for 10 min: send notification', category: 'Notification', enabled: true, lastRun: '2026-09-12T11:22:00', runCount: 23 },
-  { id: '6', name: 'Window open alert', description: 'Any window opens while away -> send notification', category: 'Notification', enabled: true, lastRun: '2026-09-15T11:22:00', runCount: 5 },
-];
 
 export const mockEvents: Event[] = [
   { id: '1', timestamp: '2026-09-15T14:32:00', title: 'Front door opened', location: 'Entrance', severity: 'info' },
