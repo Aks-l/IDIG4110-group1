@@ -32,14 +32,14 @@ const (
 		ORDER BY time ASC
 	`
 	findSensorsQuery = `
-		SELECT event_id, external_entity_id, device_class, unit,
+		SELECT external_entity_id, external_entity_id,
+			COALESCE(device_class, ''), COALESCE(unit, ''),
 			MAX(time) AS last_seen,
 			COUNT(*) AS reading_count
 		FROM ingest.readings
-		WHERE event_id IS NOT NULL
-			AND ($1::text IS NULL OR event_id::text = $1)
-		GROUP BY event_id, external_entity_id, device_class, unit
-		ORDER BY event_id
+		WHERE ($1::text IS NULL OR external_entity_id = $1)
+		GROUP BY external_entity_id, device_class, unit
+		ORDER BY external_entity_id
 	`
 )
 

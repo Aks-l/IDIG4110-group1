@@ -5,10 +5,9 @@ mqtt:
   connectRetry: true
   connectRetryInterval: 5
   keepAlive: 30
-  pingTimeOut: 10
+  pingTimeout: 10
   cleanSession: false
   topic: "sensors"
   interval: 10
-  deviceCount: 2
   gatewayId: "00000000-0000-0000-0000-000000000001"
-  
+houseConfig: "config/house.json"

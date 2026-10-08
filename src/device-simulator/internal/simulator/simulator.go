@@ -9,63 +9,96 @@ import (
 	"IDIG4110/device-simulator/internal/broker"
 	"IDIG4110/device-simulator/internal/config"
 	"IDIG4110/shared/dto"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Simulator struct {
-	broker      *broker.Broker
-	interval    int
-	topic       string
-	deviceCount int
-	gatewayID   string
-	qos         byte
+	broker   *broker.Broker
+	gateway  *Gateway
+	topic    string
+	interval time.Duration
+	qos      byte
 }
 
-func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
+func Init(b *broker.Broker, mqttConfig config.MqttConfig, house config.House) (*Simulator, error) {
+	gateway, err := NewGateway(house, NewMemoryStorage())
+	if err != nil {
+		return nil, err
+	}
+	if gateway.ID() != mqttConfig.GatewayID {
+		return nil, fmt.Errorf("mqtt gatewayId %q does not match house gateway_id %q", mqttConfig.GatewayID, gateway.ID())
+	}
+	if mqttConfig.Interval <= 0 {
+		return nil, fmt.Errorf("mqtt interval must be greater than zero")
+	}
 	return &Simulator{
-		broker:      b,
-		interval:    cfg.Interval,
-		topic:       cfg.Topic,
-		deviceCount: cfg.DeviceCount,
-		gatewayID:   cfg.GatewayID,
-		qos:         byte(0),
-	}
+		broker: b, gateway: gateway, topic: mqttConfig.Topic,
+		interval: time.Duration(mqttConfig.Interval) * time.Second, qos: 1,
+	}, nil
 }
 
-func (s *Simulator) Start() {
-	for i := 0; i < s.deviceCount; i++ {
-		entityID := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
-		go s.run(entityID)
+func (s *Simulator) Start() error {
+	if err := s.broker.Subscribe("twin/"+s.gateway.ID()+"/commands", s.handleCommand); err != nil {
+		return fmt.Errorf("subscribe to gateway commands: %w", err)
 	}
-	select {}
-}
-
-func (s *Simulator) run(id string) {
-	temperature := 20.0
+	ticker := time.NewTicker(s.interval)
+	defer ticker.Stop()
 	for {
-		temperature = NextTemperature(temperature)
-		event := GenerateMockData(id, temperature)
-
-		payload, err := json.Marshal(event)
+		readings, err := s.gateway.Simulate(time.Now())
 		if err != nil {
-			slog.Error("JSON marshal failed", "error", err)
-			continue
+			return err
 		}
-
-		raw := dto.RawMessage{
-			Time:      event.TimeFired,
-			GatewayID: s.gatewayID,
-			Topic:     fmt.Sprintf("%s/%s/%s", s.topic, id, "state"),
-			Payload:   payload,
+		for _, reading := range readings {
+			if err := s.publish(reading); err != nil {
+				return err
+			}
 		}
-
-		envelope, err := json.Marshal(raw)
-		if err != nil {
-			slog.Error("JSON marshal failed", "error", err)
-			continue
-		}
-
-		s.broker.Publish(raw.Topic, s.qos, envelope)
-
-		time.Sleep(time.Duration(s.interval) * time.Second)
+		<-ticker.C
 	}
+}
+
+func (s *Simulator) handleCommand(_ mqtt.Client, message mqtt.Message) {
+	var command dto.Command
+	if err := json.Unmarshal(message.Payload(), &command); err != nil {
+		slog.Error("decode device command", "error", err)
+		return
+	}
+	readings, err := s.gateway.ApplyCommand(command, time.Now())
+	if err != nil {
+		slog.Error("apply device command", "error", err, "device", command.ExternalEntityID)
+		return
+	}
+	for _, reading := range readings {
+		if err := s.publish(reading); err != nil {
+			slog.Error("publish command state", "error", err)
+		}
+	}
+}
+
+func (s *Simulator) publish(reading Reading) error {
+	event := dto.StateEvent{
+		EventType: "state_changed",
+		TimeFired: reading.Time,
+		EntityID:  reading.DeviceID + "." + reading.Property,
+		NewState:  dto.NewState{State: reading.State, Attributes: reading.Attributes},
+	}
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("encode device event: %w", err)
+	}
+	raw := dto.RawMessage{
+		Time: reading.Time, GatewayID: s.gateway.ID(),
+		Topic:   fmt.Sprintf("%s/%s/%s/state", s.topic, reading.DeviceID, reading.Property),
+		Payload: payload,
+	}
+	envelope, err := json.Marshal(raw)
+	if err != nil {
+		return fmt.Errorf("encode MQTT envelope: %w", err)
+	}
+	if err := s.broker.Publish(raw.Topic, s.qos, envelope); err != nil {
+		return fmt.Errorf("publish %s: %w", raw.Topic, err)
+	}
+	slog.Info("generated device reading", "deviceID", reading.DeviceID, "property", reading.Property, "value", reading.State)
+	return nil
 }

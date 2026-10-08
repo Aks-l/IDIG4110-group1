@@ -37,8 +37,8 @@ type DatabaseConfig struct {
 type ServerConfig struct {
 	Port           int `yaml:"port"`
 	ReadTimeout    int `yaml:"readTimeout"`
-	WriteTimout    int `yaml:"writeTimout"`
-	IdleTimeout    int `yaml:"idleTimout"`
+	WriteTimeout   int `yaml:"writeTimeout"`
+	IdleTimeout    int `yaml:"idleTimeout"`
 	MaxHeaderBytes int `yaml:"maxHeaderBytes"`
 }
 
