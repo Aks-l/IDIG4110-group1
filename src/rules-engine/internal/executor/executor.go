@@ -103,6 +103,10 @@ func (x *Executor) raiseIncident(ctx context.Context, f engine.Firing, a rule.Ac
 		},
 		TriggeredAt: f.At,
 	}, channels)
+	if errors.Is(err, store.ErrConflict) {
+		// Dedup to avoid same incident registering multiple times
+		return nil
+	}
 	if err != nil {
 		return err
 	}
