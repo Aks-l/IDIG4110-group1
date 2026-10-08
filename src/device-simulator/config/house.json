@@ -11,12 +11,28 @@
           {
             "id": "temperature_1",
             "type": "temperature_sensor",
-            "initial_state": { "temperature": 21.5 }
+            "initial_state": { "temperature": 21.5 },
+            "simulation": {
+              "enabled": true,
+              "temperature": {
+                "min": 18.0,
+                "max": 26.0,
+                "max_change": 0.3
+              }
+            }
           },
           {
             "id": "humidity_1",
             "type": "humidity_sensor",
-            "initial_state": { "humidity": 45.0 }
+            "initial_state": { "humidity": 45.0 },
+            "simulation": {
+              "enabled": true,
+              "humidity": {
+                "min": 30.0,
+                "max": 70.0,
+                "max_change": 2.0
+              }
+            }
           },
           {
             "id": "light_1",
@@ -31,6 +47,22 @@
               "current_temperature": 24.0,
               "target_temperature": 21.0,
               "mode": "cool"
+            },
+            "simulation": {
+              "enabled": true,
+              "temperature_step": 0.5
+            }
+          },
+          {
+            "id": "thermostat_1",
+            "type": "thermostat",
+            "initial_state": {
+              "current_temperature": 20.0,
+              "target_temperature": 21.0
+            },
+            "simulation": {
+              "enabled": true,
+              "temperature_step": 0.2
             }
           }
         ]
@@ -47,12 +79,40 @@
               "current_temperature": 22.0,
               "target_temperature": 180.0,
               "mode": "conventional"
+            },
+            "simulation": {
+              "enabled": true,
+              "temperature_step": 2.0
             }
           },
           {
             "id": "plug_1",
             "type": "smart_plug",
-            "initial_state": { "on": false, "power": 0.0 }
+            "initial_state": { "on": false, "power": 0.0 },
+            "simulation": {
+              "enabled": true,
+              "power": {
+                "min": 60.0,
+                "max": 80.0
+              }
+            }
+          },
+          {
+            "id": "energy_1",
+            "type": "energy_sensor",
+            "initial_state": {
+              "power": 120.0,
+              "energy": 0.0
+            },
+            "simulation": {
+              "enabled": true,
+              "power": {
+                "min": 80.0,
+                "max": 180.0,
+                "max_change": 10.0
+              },
+              "energy_per_tick": 0.002
+            }
           }
         ]
       },
@@ -63,12 +123,20 @@
           {
             "id": "motion_1",
             "type": "motion_sensor",
-            "initial_state": { "motion": false }
+            "initial_state": { "motion": false },
+            "simulation": {
+              "enabled": true,
+              "motion_probability": 0.15
+            }
           },
           {
             "id": "door_1",
             "type": "door_sensor",
-            "initial_state": { "open": false }
+            "initial_state": { "open": false },
+            "simulation": {
+              "enabled": true,
+              "open_probability": 0.05
+            }
           }
         ]
       }
