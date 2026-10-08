@@ -21,7 +21,10 @@ func Run() error {
 		return err
 	}
 
-	router := NewRouter()
+	router, err := NewRouter(cfg)
+	if err != nil {
+		return err
+	}
 
 	httpServer := http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

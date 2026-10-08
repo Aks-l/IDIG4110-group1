@@ -9,6 +9,13 @@ import (
 
 type Config struct {
 	Server    ServerConfig    `yaml:"server"`
+	Upstreams []UpstreamConfig `yaml:"upstreams"`
+}
+
+type UpstreamConfig struct {
+	Name   string `yaml:"name"`
+	Prefix string `yaml:"prefix"`
+	Url    string `yaml:"url"`
 }
 
 
