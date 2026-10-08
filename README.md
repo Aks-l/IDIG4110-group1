@@ -37,6 +37,19 @@ Database-per-service: each microservice owns its own Postgres container. All use
 
 Dev credentials are intentionally simple. Production credentials come from environment variables (see .env.example).
 
-### Message broker
+### Services
 
-Mosquitto (MQTT) on port 1883, anonymous access in dev.
+| Service | Host port | What it does | Docs |
+|---|---|---|---|
+| ingest-service | 8081 | Receives gateway data over MQTT, stores it in `ingest_db`, publishes normalized readings on Kafka and forwards device commands from Kafka to MQTT | [mqtt-envelope.md](docs/architecture/mqtt-envelope.md), [gateway-api.md](docs/architecture/gateway-api.md) |
+| rules-engine | 8083 | Evaluates automation rules against the readings and sends commands, raises incidents and queues notifications. REST API under `/api/v1` | [rules-engine.md](docs/architecture/rules-engine.md) |
+| device-simulator | 8082 | Publishes simulated sensor states to Mosquitto | |
+
+### Message brokers
+
+- **Kafka** is the event bus between services. Containers use `kafka:29092`; tools on the host use `localhost:9092`. Topics: `twin.readings`, `twin.commands` and `twin.incidents`. See [decision 0001](docs/decisions/0001-kafka-event-bus.md).
+- **Mosquitto (MQTT)** listens on port 1883 for gateways and devices, with anonymous access in dev.
+
+### Deployment
+
+The SkyHiGh (OpenStack) environment and its deploy script are described in [infra/skyhigh/README.md](infra/skyhigh/README.md).

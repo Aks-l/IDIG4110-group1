@@ -1,6 +1,6 @@
 # Data model and schema ownership
 
-The platform uses a database-per-service layout. Each microservice owns one Postgres database and is the only service that reads or writes it directly. Other services reference its records by UUID and stay in sync through MQTT events.
+The platform uses a database-per-service layout. Each microservice owns one Postgres database and is the only service that reads or writes it directly. Other services reference its records by UUID and stay in sync through events on the Kafka bus (see [decision 0001](../decisions/0001-kafka-event-bus.md)).
 
 This document is the contract for that model: which database exists, which service owns it, what each table is for, and the rules that keep the databases decoupled. Future branches build against this; if a change would break a rule here, change the rule deliberately in this document first, not silently in a migration.
 
@@ -70,7 +70,7 @@ Every row that another service might reference gets a UUID primary key generated
 
 ### 4. Consistency is eventual, via events
 
-When service A changes something service B cares about, A publishes an MQTT event and B updates its own copy. There is no distributed transaction. Schemas are designed so this is sufficient: for instance `twin_state` is rebuilt from `readings` events, not locked against them.
+When service A changes something service B cares about, A publishes an event on Kafka and B updates its own copy. MQTT is used only between gateways and ingest-service. There is no distributed transaction. Schemas are designed so this is sufficient: for instance `twin_state` is rebuilt from `readings` events, not locked against them.
 
 ### 5. Vocabularies are enforced and documented
 

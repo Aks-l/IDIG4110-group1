@@ -99,13 +99,14 @@ resources:
         - { protocol: udp, remote_mode: remote_group_id }
         - { protocol: icmp, remote_mode: remote_group_id }
 
-  # Data tier: only the cluster may reach PostgreSQL and Kafka.
+  # Data tier: only the cluster may reach the databases and Kafka.
+  # 5432-5435 = ingest_db, twin_db, rules_db, identity_db (one container each).
   sg_data:
     type: OS::Neutron::SecurityGroup
     properties:
       name: sg-data
       rules:
-        - { protocol: tcp, port_range_min: 5432, port_range_max: 5432, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
+        - { protocol: tcp, port_range_min: 5432, port_range_max: 5435, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
         - { protocol: tcp, port_range_min: 9092, port_range_max: 9092, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
         - { protocol: icmp, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_cluster } }
         - { protocol: tcp, port_range_min: 22, port_range_max: 22, remote_mode: remote_group_id, remote_group_id: { get_resource: sg_edge } }
