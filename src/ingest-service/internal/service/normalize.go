@@ -18,9 +18,9 @@ func Normalize(raw dto.RawMessage) (dto.Reading, error) {
 	reading := dto.Reading{
 		GatewayID:        raw.GatewayID,
 		ExternalEntityID: event.EntityID,
-		Time:             raw.Time,
-		DeviceClass:      event.NewState.Attributes["device_class"],
-		Unit:             event.NewState.Attributes["unit_of_measurement"],
+		Timestamp:        raw.Time,
+		DeviceClass:      attrPtr(event.NewState.Attributes, "device_class"),
+		Unit:             attrPtr(event.NewState.Attributes, "unit_of_measurement"),
 		Attributes:       map[string]any{},
 	}
 
@@ -42,4 +42,11 @@ func Normalize(raw dto.RawMessage) (dto.Reading, error) {
 	}
 
 	return reading, nil
+}
+
+func attrPtr(attributes map[string]string, key string) *string {
+	if value, ok := attributes[key]; ok {
+		return &value
+	}
+	return nil
 }

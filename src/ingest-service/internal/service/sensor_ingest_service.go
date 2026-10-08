@@ -3,20 +3,27 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"IDIG4110/ingest-service/internal/domain"
 	"IDIG4110/shared/dto"
 )
 
+const publishTimeout = 5 * time.Second
+
 type SensorIngestSvcImpl struct {
-	repo domain.SensorIngestRepo
+	repo      domain.SensorIngestRepo
+	publisher domain.ReadingPublisher
+	gatewayID string
 }
 
-func NewImplSensorIngestSvc(repo domain.SensorIngestRepo) *SensorIngestSvcImpl {
+// NewImplSensorIngestSvc stores events through repo and, when publisher is
+// not nil, publishes them as normalized readings from gatewayID.
+func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher, gatewayID string) *SensorIngestSvcImpl {
 	return &SensorIngestSvcImpl{
-		repo: repo,
+		repo:      repo,
+		publisher: publisher,
+		gatewayID: gatewayID,
 	}
 }
 
@@ -31,7 +38,16 @@ func (s *SensorIngestSvcImpl) Create(ctx context.Context, raw dto.RawMessage) er
 	if err := s.repo.InsertReading(ctx, reading); err != nil {
 		return err
 	}
-	slog.Info("successfully added reading")
+
+	if s.publisher == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+
+	defer cancel()
+	if err := s.publisher.PublishReading(ctx, reading); err != nil {
+		return fmt.Errorf("publishing reading: %w", err)
+	}
 	return nil
 }
 

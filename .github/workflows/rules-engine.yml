@@ -1,0 +1,55 @@
+name: rules-engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/rules-engine/**
+      - src/shared/**
+      - infra/prod/rules-engine.prod.Dockerfile
+      - .github/workflows/rules-engine.yml
+  pull_request:
+    paths:
+      - src/rules-engine/**
+      - src/shared/**
+      - infra/prod/rules-engine.prod.Dockerfile
+      - .github/workflows/rules-engine.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/rules-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: src/rules-engine/go.mod
+      - run: go vet ./...
+      - run: go test ./...
+
+  image:
+    # Publishes ghcr.io/aks-l/idig4110-group1/rules-engine for the k3s cluster.
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/prod/rules-engine.prod.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/aks-l/idig4110-group1/rules-engine:latest
+            ghcr.io/aks-l/idig4110-group1/rules-engine:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}

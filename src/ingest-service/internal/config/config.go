@@ -12,6 +12,17 @@ type Config struct {
 	Database  DatabaseConfig  `yaml:"database"`
 	Mqtt      MqttConfig      `yaml:"mqtt"`
 	Migration MigrationConfig `yaml:"migration"`
+	Kafka     KafkaConfig     `yaml:"kafka"`
+}
+
+// KafkaConfig connects ingest to the event bus. With no brokers, readings are
+// only stored and commands are not forwarded.
+type KafkaConfig struct {
+	Brokers string `yaml:"brokers"`
+	// GatewayID identifies the gateway readings arrive from until gateways
+	// are registered in ingest.gateways.
+	GatewayID     string `yaml:"gatewayId"`
+	CommandsGroup string `yaml:"commandsGroup"`
 }
 
 type DatabaseConfig struct {

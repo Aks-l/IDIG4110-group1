@@ -61,7 +61,7 @@ func (r *SensorIngestRepoImpl) InsertReading(ctx context.Context, reading dto.Re
 	tag, err := r.db.Conn.Exec(
 		ctx,
 		insertReadingQuery,
-		reading.Time,
+		reading.Timestamp,
 		reading.GatewayID,
 		reading.ExternalEntityID,
 		reading.DeviceClass,
@@ -110,7 +110,7 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 		var reading dto.Reading
 
 		if err := rows.Scan(
-			&reading.Time,
+			&reading.Timestamp,
 			&reading.GatewayID,
 			&reading.ExternalEntityID,
 			&reading.DeviceClass,
