@@ -14,7 +14,7 @@ docker compose up
 
 ### Migrations
 
-Migrations live in `src/<service>/migrations`; each service has its own `cmd/migrate`. Ingest uses `make migrate-up`; twin-core: `docker compose exec twin-core go run ./cmd/migrate up` (the compose service presets `DB_URL`).
+Migrations live in `src/<service>/migrations`; each service has its own `cmd/migrate`. Ingest uses `make migrate-up`; twin-core: `docker compose exec twin-core go run ./cmd/migrate up` (the compose service presets `DB_URL`) — though the twin-core and rules-engine servers also apply pending migrations at startup. The twin-core migration `20261008200000_seed_demo_home` seeds the demo home (`00000000-0000-0000-0000-000000000001`) with areas, devices, entities and state, including the entity ids the seeded safety rules act on.
 
 ### Services
 

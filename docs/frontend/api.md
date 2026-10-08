@@ -204,8 +204,10 @@ PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms
 Everything reads one dashboard view, `GET /api/v1/homes/{home_id}/state`:
 areas and devices with their entities and current state. The home is
 `PLACEHOLDER_TWIN_HOME_ID` when set, otherwise the first home from
-`GET /api/v1/homes` — in practice the `Unassigned` sentinel home
-`00000000-0000-0000-0000-000000000001`, where auto-provisioned devices land.
+`GET /api/v1/homes` — in practice the seeded demo home
+`00000000-0000-0000-0000-000000000001` (`20261008200000_seed_demo_home`),
+where the device-simulator's readings land and auto-provisioning still
+drops unknown devices.
 Backend errors surface as-is, like the rules hybrid. Both this hybrid and
 the rules hybrid are enabled by default: `npm run dev` reads them from
 `.env.local` (`localhost` URLs) and Docker Compose defaults to the
@@ -240,9 +242,9 @@ twin-core lacks:
 twin-core is part of the stack: the development compose publishes it on
 host port `8084` (the api-gateway moved to host port `8080` and also routes
 twin-core's public API), so the hybrid works against the running backend
-out of the box. Its migrations must be applied once (`docker compose exec
-twin-core go run ./cmd/migrate up`), and rooms stay empty until areas are
-created and devices assigned to them via the structure API.
+out of the box. twin-core applies its migrations at startup; they seed a
+demo home (`20261008200000_seed_demo_home`) with rooms, devices and state,
+so there is data to show without creating anything by hand.
 
 ## Endpoint Modules
 

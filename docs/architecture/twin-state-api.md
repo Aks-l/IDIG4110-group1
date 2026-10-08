@@ -30,7 +30,9 @@ The upsert is last-write-wins keyed on the reading's `timestamp` (stored as `twi
 
 Readings can arrive before gateway sync has registered their devices. Instead of dropping them, twin-core provisions placeholders on first sight:
 
-- home: the fixed `Unassigned` sentinel home (`00000000-0000-0000-0000-000000000001`)
+- home: the fixed default home (`00000000-0000-0000-0000-000000000001`,
+  `Demo Home` once `20261008200000_seed_demo_home` has run; unknown devices
+  still land here)
 - device: one placeholder per `external_entity_id`, keyed by `(gateway_id, external_id)`
 - entity: `domain` derived from the id prefix (`sensor.x` -> `sensor`), `name` from the `friendly_name` attribute when present
 

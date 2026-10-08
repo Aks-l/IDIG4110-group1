@@ -24,11 +24,11 @@ docker compose up -d   # repository root
 ```
 
 Without the backend stack the hybrid pages show 502 errors; everything else
-keeps serving fixtures. twin-core also needs its migrations applied once
-(`docker compose exec twin-core go run ./cmd/migrate up`), and rooms stay
-empty until areas are created and devices assigned to them. The defaults
-live in `docker-compose.yml` and can be overridden from the shell (an empty
-variable falls back to the built-in default):
+keeps serving fixtures. twin-core applies its migrations at startup,
+seeding a demo home (rooms, devices, state) that the hybrid pages show —
+the device-simulator keeps the Living Room and Kitchen temperatures live.
+The defaults live in `docker-compose.yml` and can be overridden from the
+shell (an empty variable falls back to the built-in default):
 
 ```bash
 # back to mock mode without the placeholder routes
