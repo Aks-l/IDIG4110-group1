@@ -63,7 +63,5 @@ func (s *UserService) RegisterNewAccount(ctx context.Context, userDTO dto.Create
 		return err
 	}
 
-	s.repo.CreateUser(ctx, FromCreateDTO(userDTO, hashedPassword))
-
-	return nil
+	return s.repo.CreateUser(ctx, FromCreateDTO(userDTO, hashedPassword))
 }

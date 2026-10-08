@@ -20,11 +20,17 @@ func NewUserHandler(uS *UserService) *UserHandler {
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var user dto.CreateUserDTO
 	if err := jsonutils.Decode[dto.CreateUserDTO](r, &user); err != nil {
-		httperror.HandleError(w, http.StatusBadRequest, err, httperror.ErrInternalServerError)
+		httperror.HandleError(w, http.StatusBadRequest, err, httperror.ErrUnprocessableEntity)
+		return
+	}
+
+	if err := jsonutils.Validate[dto.CreateUserDTO](user); err != nil {
+		httperror.HandleError(w, http.StatusBadRequest, err, httperror.ErrUnprocessableEntity)
 		return
 	}
 
 	if err := h.userService.RegisterNewAccount(r.Context(), user); err != nil {
+		httperror.HandleAppError(w, err)
 		return
 	}
 

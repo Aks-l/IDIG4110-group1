@@ -1,6 +1,8 @@
 package user
 
 import (
+	"IDIG4110/shared/apperror"
+	database "IDIG4110/shared/db"
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,5 +34,17 @@ VALUES ($1, $2)
 		user.PasswordHash,
 	)
 
-	return err
+	if err != nil {
+		if database.IsUniqueViolation(err) {
+			return apperror.CreateNewError(
+				apperror.CodeEmailAlreadyUsed,
+				"email alredy in use",
+			)
+		}
+		return apperror.CreateNewError(
+			apperror.CodeInternal,
+			"internal server error",
+		)
+	}
+	return nil
 }

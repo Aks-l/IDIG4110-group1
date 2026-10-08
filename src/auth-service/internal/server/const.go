@@ -2,5 +2,5 @@ package server
 
 const (
 	Version  = "v1"
-	AuthPath = "/" + Version + "/auth"
+	AuthPath = " /" + Version + "/auth"
 )
