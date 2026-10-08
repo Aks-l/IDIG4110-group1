@@ -1,0 +1,17 @@
+server:
+  port: 8080
+  readTimout: 10
+  writeTimout: 10
+  idleTimout: 30
+  maxHeaderBytes: 1048576
+
+database:
+  host: "gateway-db"
+  port: 5432
+  user: "gateway"
+  name: "gateway_db"
+  password: "gateway"
+  ssl: "disable"
+
+migration:
+  directory: "migrations"
