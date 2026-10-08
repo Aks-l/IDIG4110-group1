@@ -1,0 +1,72 @@
+# rules-engine on the SkyHiGh k3s cluster. Applied by
+# ./infra/skyhigh/deploy.sh up k8s. Credentials come from the data-tier
+# Secret, which deploy.sh copies from data-vm.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rules-engine
+  labels:
+    app: rules-engine
+spec:
+  # One replica: the engine keeps the latest state of every entity in memory
+  # and conditions can span entities, so readings must not be split between
+  # copies. Recreate avoids two copies firing during a rollout.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rules-engine
+  template:
+    metadata:
+      labels:
+        app: rules-engine
+    spec:
+      containers:
+        - name: rules-engine
+          image: ghcr.io/aks-l/idig4110-group1/rules-engine:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef: { name: data-tier, key: DATA_VM_IP }
+            - name: DB_PORT
+              value: "5434"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: { name: data-tier, key: RULES_DB_USER }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: data-tier, key: RULES_DB_PASSWORD }
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef: { name: data-tier, key: RULES_DB_NAME }
+            - name: KAFKA_BROKERS
+              value: "$(DB_HOST):9092"
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rules-engine
+  labels:
+    app: rules-engine
+spec:
+  selector:
+    app: rules-engine
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

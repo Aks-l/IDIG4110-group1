@@ -132,6 +132,20 @@ If the stack is rebuilt, its IPs change. Set `FLOATING_IP`, `AGENT1_IP`,
 `AGENT2_IP` and `DATA_IP` in the environment or at the top of the script, using
 the values from `openstack stack output show twin --all`.
 
+## Services on k3s
+
+Every manifest in [`infra/k8s/`](../k8s) is applied by `deploy.sh up k8s`.
+Images are built and published to GitHub Container Registry by the workflows
+in `.github/workflows/` when changes reach `main`.
+
+| Service | Manifest | Image | Notes |
+|---|---|---|---|
+| rules-engine | [`rules-engine.yaml`](../k8s/rules-engine.yaml) | `ghcr.io/aks-l/idig4110-group1/rules-engine` | One replica (in-memory state). Uses `rules_db` (5434) and Kafka on data-vm. |
+
+GitHub makes a newly published package private. After the first workflow run,
+set the package to public under the repository's Packages page. Otherwise the
+cluster cannot pull the image, and pods stay in `ImagePullBackOff`.
+
 ## Getting around
 
 From `k3s-server`, `koble agent1`, `koble agent2` and `koble data` SSH onto the

@@ -64,8 +64,8 @@ Adding a command means adding it to relevant entities' `command_map` and, if it 
 
 ## Flow
 
-1. Caller issues a command via `POST /gateways/{gateway_id}/commands` on the Device Integration Gateway with the body above (minus `id` and `issued_at`, which the gateway generates).
-2. The gateway records it in `commands` with status `pending`, generates `id` and `correlation_id`, stamps `issued_at`, and publishes the full message to `twin/{gateway_id}/commands`.
+1. Caller (for example rules-engine) publishes the full command, including `id`, `issued_at` and `expires_at`, on the Kafka topic `twin.commands`, keyed by `{gateway_id}/{external_entity_id}` so commands for one entity stay in order. Commands travel over Kafka between services; see [decision 0001](../decisions/0001-kafka-event-bus.md).
+2. ingest-service consumes `twin.commands`, drops commands already past `expires_at`, and forwards the message unchanged to `twin/{gateway_id}/commands` over MQTT with QoS 1. Recording the command in `commands` (status `pending`, `correlation_id`) is not implemented yet.
 3. The adapter picks it up, checks it has not seen this `id` before, checks `now() < expires_at`, translates per `command_map`, and executes against the source (HA: `call_service`).
 4. The adapter publishes the outcome to `twin/{gateway_id}/commands/{correlation_id}/result` and updates the row: `sent`, then `acknowledged` on success or `failed` with the error in `result`.
 5. If no response arrives before `expires_at`, status becomes `timeout`. Expired commands never fire.
