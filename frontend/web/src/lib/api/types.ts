@@ -1,21 +1,40 @@
-export type Automation = {
-  id: string;
-  name: string;
-  description: string;
-  category: 'Comfort' | 'Security' | 'Energy' | 'Notification';
-  enabled: boolean;
-  lastRun?: string;
-  runCount: number;
-};
+export type DayOfWeek = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+export type TemperatureOp = 'lt' | 'gt' | 'eq';
+
+// A condition that must hold for the automation to fire.
+export type AutomationCondition =
+  | { kind: 'time';        from: string; to: string }            // "Between 18:00 and 06:00"
+  | { kind: 'day';         days: DayOfWeek[] }                    // "On Sat, Sun"
+  | { kind: 'temperature'; op: TemperatureOp; value: number }     // "Temperature below 15°C"
+  | { kind: 'motion';      location: string }                     // "Motion in Hallway"
+  | { kind: 'presence';    state: 'home' | 'away' };              // "Nobody is home"
+
+export type ConditionKind = AutomationCondition['kind'];
+
+// An action to perform when all conditions are met.
+export type AutomationAction =
+  | { kind: 'device'; deviceName: string; command: 'turn_on' | 'turn_off' | 'set'; value?: string }
+  | { kind: 'notify'; message: string }
+  | { kind: 'delay';  minutes: number };
+
+export type ActionKind = AutomationAction['kind'];
+
+export type AutomationCategory = 'Comfort' | 'Security' | 'Energy' | 'Notification';
 
 export type AutomationDraft = {
   name: string;
   description: string;
-  category: Automation['category'];
-  triggerType: string;
-  triggerDetail: string;
-  actionCommand: string;
-  actionTarget: string;
+  category: AutomationCategory;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+};
+
+export type Automation = AutomationDraft & {
+  id: string;
+  enabled: boolean;
+  lastRun?: string;
+  runCount: number;
 };
 
 export type OverviewData = {
@@ -85,7 +104,14 @@ export type Device = {
   type: string;
   on: boolean;
   roomId?: string;
-  position?: [number, number, number];
+
+  // Detail fields (optional — not every device has all of them)
+  powerWatts?: number;     // current draw
+  signal?: number;         // 0..100 (wifi/zigbee strength)
+  battery?: number;        // 0..100 (only battery-powered devices)
+  firmware?: string;       // "1.4.2"
+  lastSeen?: string;       // ISO
+  installedAt?: string;    // ISO
 };
 
 export type RoomLayout = {
