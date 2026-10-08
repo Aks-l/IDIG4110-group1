@@ -118,13 +118,14 @@ HA event (trimmed):
 
 This produces the envelope example at the top: `data.entity_id` becomes `external_entity_id`, `time_fired` becomes `timestamp`, `context.id` becomes `event_id`, `state: "21.5"` becomes `value_num: 21.5`, and the full `attributes` object is preserved. A binary sensor (`state: "on"`, no unit) becomes `value_text: "on"`, `value_num: null`, `unit: null`.
 
-Current state: the device-simulator publishes exactly this event shape on MQTT in development, and ingest-service parses it; the translation into the normalized model above is not implemented yet.
+Current state: the device-simulator publishes exactly this event shape on MQTT in development, and ingest-service parses it, translates it into the model above (`ToReading` in `src/ingest-service`) and publishes the reading on Kafka (`twin.readings`).
 
 ## Guarantees
 
 - At-least-once delivery: QoS 1 on publish and subscribe. Consumers must tolerate duplicates, since gateways can re-send states on reconnect.
 - Retained messages: not used. State recovery comes from a fresh full-state sync at adapter startup, not from retained MQTT messages.
 - Ordering is not guaranteed across entities. Per-entity ordering is preserved well enough for a last-write-wins twin, but consumers keying on order must use `timestamp`, not arrival order.
+- Storage before publishing: ingest-service stores the event in ingest_db before publishing the reading to Kafka. If the publish fails, the row stays stored but the reading is never published, so consumers can miss individual readings. Accepted gap; see rules-engine.md, Delivery semantics.
 
 ## Supporting a new source
 
