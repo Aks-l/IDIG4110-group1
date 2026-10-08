@@ -112,6 +112,10 @@ export type Device = {
   firmware?: string;       // "1.4.2"
   lastSeen?: string;       // ISO
   installedAt?: string;    // ISO
+
+  // Position in the 3D scene. Optional: when absent, the scene derives a
+  // placement from the device's roomId and the /3d/rooms layout.
+  position?: [number, number, number];
 };
 
 export type RoomLayout = {

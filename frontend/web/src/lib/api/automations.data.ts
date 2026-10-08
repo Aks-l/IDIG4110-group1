@@ -10,15 +10,13 @@ export function loadAutomations(): Promise<Automation[]> {
 
 export function createAutomation(draft: AutomationDraft): Promise<Automation> {
   if (dataSource === 'mock') {
-    // Fabricate an Automation from the draft
+    // Fabricate an Automation from the draft, keeping its conditions and
+    // actions so the automations page can render the summary.
     return Promise.resolve({
+      ...draft,
       id: `mock-${Date.now()}`,
-      name: draft.name,
-      description: draft.description,
-      category: draft.category,
       enabled: true,
       runCount: 0,
-      lastRun: undefined,
     });
   }
   return apiCreateAutomation(draft);
@@ -34,6 +32,8 @@ export function setAutomationState(automationId: string, enabled: boolean): Prom
       name: 'Automation',
       description: '',
       category: 'Comfort' as const,
+      conditions: [],
+      actions: [],
       runCount: 0,
     }),
     enabled,

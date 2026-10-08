@@ -1,4 +1,3 @@
-/*
-export default function OverViewPage() {
-  return <h1 className="text-2xl font-bold">Settings</h1>;
-}*/
+export default function SettingsPage() {
+  return <h1 className="page-heading text-3xl font-bold">Settings</h1>;
+}
