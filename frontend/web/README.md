@@ -12,27 +12,27 @@ docker compose up --build
 
 Open [http://localhost:3000](http://localhost:3000). Compose builds with the
 same defaults as `npm run dev` with `.env.local`: the pages call the
-placeholder API routes (`NEXT_PUBLIC_DATA_SOURCE=api`), and `/automations`
-plus `/events` are served from the rules-engine (hybrid mode). The container
-reaches the backend stack's published ports through `host.docker.internal`,
-so bring the backend up first from the repository root:
+placeholder API routes (`NEXT_PUBLIC_DATA_SOURCE=api`), and the hybrid modes
+serve what the backend implements — `/automations` plus `/events` from the
+rules-engine (host port 8083) and `/rooms`, `/devices` and `/3d/rooms` from
+twin-core (host port 8084). The container reaches the backend stack's
+published ports through `host.docker.internal`, so bring the backend up
+first from the repository root:
 
 ```bash
 docker compose up -d   # repository root
 ```
 
-Without the backend stack the automations and events pages show 502 errors;
-everything else keeps serving fixtures. The defaults live in
-`docker-compose.yml` and can be overridden from the shell (an empty variable
-falls back to the built-in default):
+Without the backend stack the hybrid pages show 502 errors; everything else
+keeps serving fixtures. twin-core also needs its migrations applied once
+(`docker compose exec twin-core go run ./cmd/migrate up`), and rooms stay
+empty until areas are created and devices assigned to them. The defaults
+live in `docker-compose.yml` and can be overridden from the shell (an empty
+variable falls back to the built-in default):
 
 ```bash
 # back to mock mode without the placeholder routes
 NEXT_PUBLIC_DATA_SOURCE=mock docker compose up --build
-
-# also serve /rooms, /devices and /3d/rooms from twin-core (opt-in until
-# the scaffold branch merges; PLACEHOLDER_TWIN_PATHS defaults to these)
-PLACEHOLDER_TWIN_URL=http://host.docker.internal:8084 docker compose up -d
 ```
 
 `NEXT_PUBLIC_*` variables are baked into the browser bundle at build time —

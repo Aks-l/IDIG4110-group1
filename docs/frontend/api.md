@@ -121,15 +121,14 @@ Swapping in the real backend is configuration-only, with two options:
    there unchanged, so endpoints can migrate one by one as the backend
    implements them.
 
-The real backend must serve these paths and shapes under the base URL. Today
-the api-gateway exposes `/api/v1/ingest/*`, `/api/v1/rules*` and
-`/api/v1/incidents*` on host port `8084` (see
-`src/api-gateway/config/config.yaml`), which do not overlap with this
-contract; aligning them is part of the backend work tracked in the checklist
-below. (Gateway quirk: the bare collection paths `/api/v1/rules` and
-`/api/v1/incidents` are misrouted — the gateway answers with a 307 redirect
-to the trailing-slash path, which the rules-engine then 404s; see the note
-in the hybrid section.)
+The real backend must serve these paths and shapes under the base URL. The
+merged api-gateway (host port `8080`, see
+`src/api-gateway/config/config.yaml`) fronts `/api/v1/ingest/*`,
+`/api/v1/rules*`, `/api/v1/incidents*` and twin-core's public API
+(`/api/v1/homes*`, `/api/v1/areas*`, `/api/v1/devices*`,
+`/api/v1/entities*`, `/api/v1/relations*`, `/api/v1/state*`), and it
+registers the bare collection prefixes too, fixing the earlier
+307-redirect quirk on `/api/v1/rules` and `/api/v1/incidents`.
 
 ### Hybrid: backend-backed paths
 
@@ -142,13 +141,12 @@ PLACEHOLDER_BACKEND_PATHS=/automations,/events
 ```
 
 `PLACEHOLDER_BACKEND_URL` is the backend base URL — the rules-engine directly
-(host port `8083` in the development compose setup) until the api-gateway
-serves the collection paths: the gateway registers each upstream as a
-subtree pattern (`mux.Handle(u.Prefix+"/", p)` in
-`src/api-gateway/internal/server/router.go`), so `/api/v1/rules` answers with
-a 307 redirect to `/api/v1/rules/`, which the rules-engine then 404s. The
-per-id endpoints (`PATCH /automations/:id`) are unaffected; registering the
-bare prefix too fixes the rest. When a path is listed in
+(host port `8083` in the development compose setup). The merged api-gateway
+(host port `8080`) also fronts the rules paths and now registers the bare
+collection prefix as well (`mux.Handle(u.Prefix, p)` in
+`src/api-gateway/internal/server/router.go`), fixing the 307-redirect quirk
+that used to make `/api/v1/rules` 404; either base works, the rules-engine
+just skips the hop. When a path is listed in
 `PLACEHOLDER_BACKEND_PATHS`, its placeholder route fetches from the backend,
 translates the response onto the frontend contract, and serves that; backend
 errors surface as-is, there is no silent fallback to fixtures. Unlisted paths
@@ -193,11 +191,10 @@ differ:
 
 ### Hybrid: twin-core-backed paths
 
-The twin-core scaffold on `47-scaffold-twin-core-service` (documented in
-`docs/architecture/twin-state-api.md`) serves the structural model (homes,
-areas, devices, entities, relations) and `twin_state`, the latest known value
-per entity. A second hybrid mode serves the placeholder paths it can back,
-again config-only:
+twin-core (documented in `docs/architecture/twin-state-api.md`) serves the
+structural model (homes, areas, devices, entities, relations) and
+`twin_state`, the latest known value per entity. A second hybrid mode serves
+the placeholder paths it can back, again config-only:
 
 ```env
 PLACEHOLDER_TWIN_URL=http://localhost:8084
@@ -209,10 +206,10 @@ areas and devices with their entities and current state. The home is
 `PLACEHOLDER_TWIN_HOME_ID` when set, otherwise the first home from
 `GET /api/v1/homes` — in practice the `Unassigned` sentinel home
 `00000000-0000-0000-0000-000000000001`, where auto-provisioned devices land.
-Backend errors surface as-is, like the rules hybrid. Docker Compose is wired
-the same way: `PLACEHOLDER_TWIN_PATHS` defaults to `/rooms,/devices,/3d/rooms`
-in `frontend/web/docker-compose.yml`, so enabling it there is one variable —
-`PLACEHOLDER_TWIN_URL=http://host.docker.internal:8084`.
+Backend errors surface as-is, like the rules hybrid. Both this hybrid and
+the rules hybrid are enabled by default: `npm run dev` reads them from
+`.env.local` (`localhost` URLs) and Docker Compose defaults to the
+`host.docker.internal` equivalents in `frontend/web/docker-compose.yml`.
 
 | Placeholder path | Twin-core endpoint | Translation |
 | --- | --- | --- |
@@ -220,15 +217,15 @@ in `frontend/web/docker-compose.yml`, so enabling it there is one variable —
 | `GET /devices`, `GET /devices/:id` | `GET /api/v1/homes/{home_id}/state` | devices + entities → `Device` |
 | `GET /3d/rooms` | `GET /api/v1/homes/{home_id}/state` | area geometry → `RoomLayout` |
 
-The mapping lives in `src/lib/api/twin.ts` and is honest about what the
-scaffold lacks:
+The mapping lives in `src/lib/api/twin.ts` and is honest about what
+twin-core lacks:
 
 - Room metrics take the first entity matching each metric (`device_class` or
   name: temperature, humidity, carbon dioxide/co2, occupancy/presence); the
   change is the delta against the entity's previous reading. Metrics without
   a sensor read 0, and room activity is always empty — twin-core keeps current
   and previous state only, no history.
-- Device toggles (`PATCH /devices/:id`) are rejected with `501`: the scaffold
+- Device toggles (`PATCH /devices/:id`) are rejected with `501`: twin-core
   has no command endpoint, and `POST /api/v1/readings` is the ingest path, not
   a device command.
 - Devices without a controllable entity read as off; `installedAt` and
@@ -240,10 +237,12 @@ scaffold lacks:
   free-form `geometry` when present, and otherwise falls back to a
   deterministic grid.
 
-The scaffold branch is not merged yet: its compose publishes twin-core on
-host port `8084` (and removes the api-gateway, which owns `8084` in this
-branch's compose). Until the branches merge, point `PLACEHOLDER_TWIN_URL` at
-a twin-core built from that branch, or at a stub for testing the mapping.
+twin-core is part of the stack: the development compose publishes it on
+host port `8084` (the api-gateway moved to host port `8080` and also routes
+twin-core's public API), so the hybrid works against the running backend
+out of the box. Its migrations must be applied once (`docker compose exec
+twin-core go run ./cmd/migrate up`), and rooms stay empty until areas are
+created and devices assigned to them via the structure API.
 
 ## Endpoint Modules
 

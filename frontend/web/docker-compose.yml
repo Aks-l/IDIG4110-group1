@@ -19,11 +19,10 @@ services:
       PLACEHOLDER_BACKEND_PATHS: ${PLACEHOLDER_BACKEND_PATHS:-/automations,/events}
       PLACEHOLDER_BACKEND_HOME_ID: ${PLACEHOLDER_BACKEND_HOME_ID:-}
       PLACEHOLDER_BACKEND_TEMPERATURE_ENTITY: ${PLACEHOLDER_BACKEND_TEMPERATURE_ENTITY:-}
-      # Twin hybrid: opt-in until the twin-core scaffold branch merges into
-      # the stack (its compose publishes twin-core on host port 8084; this
-      # branch's 8084 is the api-gateway). Setting the URL is enough — the
-      # paths default below. Point at a stub to preview the mapping.
-      PLACEHOLDER_TWIN_URL: ${PLACEHOLDER_TWIN_URL:-}
+      # Twin hybrid: twin-core is part of the stack (host port 8084; the
+      # api-gateway moved to 8080), so /rooms, /devices and /3d/rooms come
+      # from it once the stack is up and its migrations are applied.
+      PLACEHOLDER_TWIN_URL: ${PLACEHOLDER_TWIN_URL:-http://host.docker.internal:8084}
       PLACEHOLDER_TWIN_PATHS: ${PLACEHOLDER_TWIN_PATHS:-/rooms,/devices,/3d/rooms}
       PLACEHOLDER_TWIN_HOME_ID: ${PLACEHOLDER_TWIN_HOME_ID:-}
     # Makes host.docker.internal resolve on Linux hosts too; Docker Desktop
