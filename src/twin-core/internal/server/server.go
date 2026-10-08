@@ -25,13 +25,13 @@ func Run() error {
 		return err
 	}
 
-	db, err := db.Init(cfg.Database)
+	database, err := db.Init(cfg.Database)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { database.Close() }()
 
-	m, err := migrate.Init(cfg.Migration.Directory, db.Url)
+	m, err := migrate.Init(cfg.Migration.Directory, database.Url)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,16 @@ func Run() error {
 		return err
 	}
 
-	stateRepo := repository.NewTwinStateRepoImpl(db)
+	// A fresh database just created the runtime role the pool drops into
+	// (see db.Init); re-create the pool so no pre-migration connection
+	// survives as a row level security bypassing superuser
+	database.Close()
+	database, err = db.Init(cfg.Database)
+	if err != nil {
+		return err
+	}
+
+	stateRepo := repository.NewTwinStateRepoImpl(database)
 	twinStateSvc := service.NewImplTwinStateSvc(stateRepo)
 	stateQuerySvc := service.NewImplStateQuerySvc(stateRepo)
 	structureSvc := service.NewImplStructureSvc(stateRepo)

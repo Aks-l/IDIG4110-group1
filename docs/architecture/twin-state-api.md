@@ -19,7 +19,7 @@ The body is one reading in the normalized model from [mqtt-envelope.md](mqtt-env
 
 For each reading twin-core:
 
-1. Resolves the `(gateway_id, external_entity_id)` pair to an `entities` row.
+1. Routes `(gateway_id, external_entity_id)` through `device_registry` to a home and device, then resolves the `entities` row inside that home's row level security context (`app.home_id`, see [decision 0002](../decisions/0002-row-level-security.md)).
 2. Upserts `twin_state` for that entity.
 
 The upsert is last-write-wins keyed on the reading's `timestamp` (stored as `twin_state.updated_at`): an out-of-order, replayed, or retried reading never regresses newer state, so ingest can retry freely; no deduplication table is needed. Each accepted, strictly newer reading moves the superseded row into the previous-value columns: change detection, not history. A correction with the same timestamp overwrites the current value but leaves previous alone.

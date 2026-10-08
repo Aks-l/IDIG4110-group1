@@ -22,3 +22,8 @@ CREATE INDEX twin_relations_to_idx ON twin_relations (home_id, to_kind, to_id);
 -- relation conflicts instead of duplicating the edge in the graph view.
 CREATE UNIQUE INDEX twin_relations_edge_unique
     ON twin_relations (home_id, from_kind, from_id, to_kind, to_id, relation_type);
+
+ALTER TABLE twin_relations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE twin_relations FORCE ROW LEVEL SECURITY;
+CREATE POLICY home_isolation ON twin_relations
+    USING (home_id = current_setting('app.home_id', true)::uuid);

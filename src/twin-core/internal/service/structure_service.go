@@ -59,6 +59,10 @@ func (s *StructureSvcImpl) UpdateDevice(ctx context.Context, deviceID string, re
 	if err := requireNotNull("name", req.Name); err != nil {
 		return domain.Device{}, err
 	}
+	if req.HomeID.Set {
+		// Row level security pins every device to one home
+		return domain.Device{}, fmt.Errorf("%w: moving a device to another home is not supported", domain.ErrBadRequest)
+	}
 	return s.repo.UpdateDevice(ctx, deviceID, req)
 }
 

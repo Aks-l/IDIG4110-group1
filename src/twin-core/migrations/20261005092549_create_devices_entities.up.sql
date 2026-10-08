@@ -20,6 +20,7 @@ CREATE TABLE entities (
     id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id          uuid NOT NULL REFERENCES devices (id) ON DELETE CASCADE,
     area_id            uuid REFERENCES areas (id) ON DELETE SET NULL,
+    home_id            uuid NOT NULL REFERENCES homes (id) ON DELETE CASCADE,
     external_entity_id varchar(255) NOT NULL,
     name               varchar(255),
     domain             varchar(50) NOT NULL,
@@ -34,7 +35,19 @@ CREATE TABLE entities (
 );
 
 CREATE INDEX entities_area_idx ON entities (area_id);
+CREATE INDEX entities_home_idx ON entities (home_id);
+CREATE INDEX devices_home_idx ON devices (home_id);
 
 -- Event lookup hot path: readings arrive with the source's entity id.
 -- Resolve (device -> gateway, external_entity_id) without a sequential scan.
 CREATE INDEX entities_external_entity_idx ON entities (external_entity_id);
+
+ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE devices FORCE ROW LEVEL SECURITY;
+CREATE POLICY home_isolation ON devices
+    USING (home_id = current_setting('app.home_id', true)::uuid);
+
+ALTER TABLE entities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entities FORCE ROW LEVEL SECURITY;
+CREATE POLICY home_isolation ON entities
+    USING (home_id = current_setting('app.home_id', true)::uuid);

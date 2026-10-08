@@ -40,6 +40,17 @@ const (
 		FROM twin_relations
 		WHERE id = $1::uuid
 	`
+
+	deleteRelationQuery = `
+		DELETE FROM twin_relations WHERE id = $1::uuid
+	`
+
+	// Row level security scopes the home's rows, no home_id filter needed
+	listRelationsByHomeQuery = `
+		SELECT ` + relationColumns + `
+		FROM twin_relations
+		ORDER BY created_at, id
+	`
 )
 
 // Reports which home a relation endpoint belongs to
@@ -55,44 +66,43 @@ const (
 //   - Home id of the node
 //   - ErrNotFound when node missing, ErrBadRequest on unknown kind
 func (r *TwinStateRepoImpl) ResolveNodeHome(ctx context.Context, kind, nodeID string) (string, error) {
-	query := ""
 	switch kind {
-	case "area":
-		query = `SELECT home_id::text FROM areas WHERE id = $1::uuid`
-	case "device":
-		query = `SELECT home_id::text FROM devices WHERE id = $1::uuid`
-	case "entity":
-		query = `
-			SELECT d.home_id::text
-			FROM entities e
-			JOIN devices d ON d.id = e.device_id
-			WHERE e.id = $1::uuid
-		`
+	case nodeKindArea, nodeKindDevice, nodeKindEntity:
 	default:
 		return "", fmt.Errorf("%w: unknown node kind %q", domain.ErrBadRequest, kind)
 	}
 
-	var homeID string
-	err := r.db.Conn.QueryRow(ctx, query, nodeID).Scan(&homeID)
-	if errors.Is(err, pgx.ErrNoRows) {
+	// The node tables are row level secured, the registry resolves without
+	// a home context
+	homeID, err := r.nodeHome(ctx, nodeID, kind)
+	if errors.Is(err, domain.ErrNotFound) {
 		return "", fmt.Errorf("%w: %s %q does not exist", domain.ErrNotFound, kind, nodeID)
 	}
 	if err != nil {
-		return "", fmt.Errorf("resolve %s %s: %w", kind, nodeID, err)
+		return "", err
 	}
 	return homeID, nil
 }
 
 func (r *TwinStateRepoImpl) CreateRelation(ctx context.Context, homeID string, req domain.CreateRelationRequest) (domain.Relation, error) {
 	var rel domain.Relation
-	err := r.db.Conn.QueryRow(ctx, createRelationQuery,
-		homeID, req.FromKind, req.FromID, req.ToKind, req.ToID, req.RelationType,
-		req.Bidirectional, req.Label, jsonbParam(req.Properties), req.ValidFrom, req.ValidTo,
-	).Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID, &rel.ToKind, &rel.ToID,
-		&rel.RelationType, &rel.Bidirectional, &rel.Label, &rel.Properties,
-		&rel.ValidFrom, &rel.ValidTo)
+	err := r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, createRelationQuery,
+			homeID, req.FromKind, req.FromID, req.ToKind, req.ToID, req.RelationType,
+			req.Bidirectional, req.Label, jsonbParam(req.Properties), req.ValidFrom, req.ValidTo,
+		).Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID, &rel.ToKind, &rel.ToID,
+			&rel.RelationType, &rel.Bidirectional, &rel.Label, &rel.Properties,
+			&rel.ValidFrom, &rel.ValidTo)
+		if err != nil {
+			return fmt.Errorf("create relation: %w", mapWriteError(err))
+		}
+		if _, err := tx.Exec(ctx, registerNodeQuery, rel.ID, nodeKindRelation, homeID); err != nil {
+			return fmt.Errorf("register relation: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return domain.Relation{}, fmt.Errorf("create relation: %w", mapWriteError(err))
+		return domain.Relation{}, err
 	}
 	return rel, nil
 }
@@ -109,11 +119,18 @@ func (r *TwinStateRepoImpl) CreateRelation(ctx context.Context, homeID string, r
 //   - Relation
 //   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetRelation(ctx context.Context, relationID string) (domain.Relation, error) {
+	homeID, err := r.nodeHome(ctx, relationID, nodeKindRelation)
+	if err != nil {
+		return domain.Relation{}, err
+	}
+
 	var rel domain.Relation
-	err := r.db.Conn.QueryRow(ctx, getRelationByIDQuery, relationID).
-		Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID, &rel.ToKind, &rel.ToID,
-			&rel.RelationType, &rel.Bidirectional, &rel.Label, &rel.Properties,
-			&rel.ValidFrom, &rel.ValidTo)
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, getRelationByIDQuery, relationID).
+			Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID, &rel.ToKind, &rel.ToID,
+				&rel.RelationType, &rel.Bidirectional, &rel.Label, &rel.Properties,
+				&rel.ValidFrom, &rel.ValidTo)
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Relation{}, domain.ErrNotFound
 	}
@@ -124,6 +141,11 @@ func (r *TwinStateRepoImpl) GetRelation(ctx context.Context, relationID string) 
 }
 
 func (r *TwinStateRepoImpl) UpdateRelation(ctx context.Context, relationID string, req domain.UpdateRelationRequest) (domain.Relation, error) {
+	homeID, err := r.nodeHome(ctx, relationID, nodeKindRelation)
+	if err != nil {
+		return domain.Relation{}, err
+	}
+
 	sets := []string{}
 	args := []any{relationID}
 
@@ -165,26 +187,43 @@ func (r *TwinStateRepoImpl) UpdateRelation(ctx context.Context, relationID strin
 	query := "UPDATE twin_relations SET " + strings.Join(sets, ", ") +
 		" WHERE id = $1::uuid"
 
-	ct, err := r.db.Conn.Exec(ctx, query, args...)
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		ct, err := tx.Exec(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("update relation: %w", mapWriteError(err))
+		}
+		if ct.RowsAffected() == 0 {
+			return domain.ErrNotFound
+		}
+		return nil
+	})
 	if err != nil {
-		return domain.Relation{}, fmt.Errorf("update relation: %w", mapWriteError(err))
-	}
-	if ct.RowsAffected() == 0 {
-		return domain.Relation{}, domain.ErrNotFound
+		return domain.Relation{}, err
 	}
 
 	return r.GetRelation(ctx, relationID)
 }
 
 func (r *TwinStateRepoImpl) DeleteRelation(ctx context.Context, relationID string) error {
-	ct, err := r.db.Conn.Exec(ctx, `DELETE FROM twin_relations WHERE id = $1::uuid`, relationID)
+	homeID, err := r.nodeHome(ctx, relationID, nodeKindRelation)
 	if err != nil {
-		return fmt.Errorf("delete relation: %w", err)
+		return err
 	}
-	if ct.RowsAffected() == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
+
+	return r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		ct, err := tx.Exec(ctx, deleteRelationQuery, relationID)
+		if err != nil {
+			return fmt.Errorf("delete relation: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			return domain.ErrNotFound
+		}
+
+		if _, err := tx.Exec(ctx, unregisterNodeQuery, relationID, nodeKindRelation); err != nil {
+			return fmt.Errorf("unregister relation: %w", err)
+		}
+		return nil
+	})
 }
 
 // Returns a home's edges for the graph view, unknown home is ErrNotFound
@@ -199,38 +238,31 @@ func (r *TwinStateRepoImpl) DeleteRelation(ctx context.Context, relationID strin
 //   - Home's relations
 //   - ErrNotFound when home missing
 func (r *TwinStateRepoImpl) ListRelationsByHome(ctx context.Context, homeID string) ([]domain.Relation, error) {
-	var one int
-	err := r.db.Conn.QueryRow(ctx, `SELECT 1 FROM homes WHERE id = $1::uuid`, homeID).Scan(&one)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, domain.ErrNotFound
+	if err := r.checkHome(ctx, homeID); err != nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("check home: %w", err)
-	}
-
-	rows, err := r.db.Conn.Query(ctx, `
-		SELECT `+relationColumns+`
-		FROM twin_relations
-		WHERE home_id = $1::uuid
-		ORDER BY created_at, id
-	`, homeID)
-	if err != nil {
-		return nil, fmt.Errorf("list relations: %w", err)
-	}
-	defer rows.Close()
 
 	relations := []domain.Relation{}
-	for rows.Next() {
-		var rel domain.Relation
-		if err := rows.Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID,
-			&rel.ToKind, &rel.ToID, &rel.RelationType, &rel.Bidirectional,
-			&rel.Label, &rel.Properties, &rel.ValidFrom, &rel.ValidTo); err != nil {
-			return nil, fmt.Errorf("scan relation: %w", err)
+	err := r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, listRelationsByHomeQuery)
+		if err != nil {
+			return fmt.Errorf("list relations: %w", err)
 		}
-		relations = append(relations, rel)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("list relations: %w", err)
+		defer rows.Close()
+
+		for rows.Next() {
+			var rel domain.Relation
+			if err := rows.Scan(&rel.ID, &rel.HomeID, &rel.FromKind, &rel.FromID,
+				&rel.ToKind, &rel.ToID, &rel.RelationType, &rel.Bidirectional,
+				&rel.Label, &rel.Properties, &rel.ValidFrom, &rel.ValidTo); err != nil {
+				return fmt.Errorf("scan relation: %w", err)
+			}
+			relations = append(relations, rel)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
 	}
 	return relations, nil
 }

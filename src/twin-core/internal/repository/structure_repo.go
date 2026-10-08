@@ -50,9 +50,9 @@ const (
 	`
 
 	createEntityQuery = `
-		INSERT INTO entities (device_id, area_id, external_entity_id, name,
+		INSERT INTO entities (home_id, device_id, area_id, external_entity_id, name,
 			domain, device_class, unit, controllable, command_map, state_ttl_seconds)
-		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id::text
 	`
 
@@ -129,16 +129,30 @@ func (r *TwinStateRepoImpl) UpdateHome(ctx context.Context, homeID string, req d
 
 func (r *TwinStateRepoImpl) CreateArea(ctx context.Context, req domain.CreateAreaRequest) (domain.Area, error) {
 	var a domain.Area
-	err := r.db.Conn.QueryRow(ctx, createAreaQuery,
-		req.HomeID, req.Name, req.Floor, req.AreaType, jsonbArg(req.Geometry)).
-		Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
+	err := r.db.WithHome(ctx, req.HomeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, createAreaQuery,
+			req.HomeID, req.Name, req.Floor, req.AreaType, jsonbArg(req.Geometry)).
+			Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
+		if err != nil {
+			return fmt.Errorf("create area: %w", mapWriteError(err))
+		}
+		if _, err := tx.Exec(ctx, registerNodeQuery, a.ID, nodeKindArea, req.HomeID); err != nil {
+			return fmt.Errorf("register area: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return a, fmt.Errorf("create area: %w", mapWriteError(err))
+		return domain.Area{}, err
 	}
 	return a, nil
 }
 
 func (r *TwinStateRepoImpl) UpdateArea(ctx context.Context, areaID string, req domain.UpdateAreaRequest) (domain.Area, error) {
+	homeID, err := r.nodeHome(ctx, areaID, nodeKindArea)
+	if err != nil {
+		return domain.Area{}, err
+	}
+
 	sets := []string{}
 	args := []any{areaID}
 
@@ -173,13 +187,19 @@ func (r *TwinStateRepoImpl) UpdateArea(ctx context.Context, areaID string, req d
 		" WHERE id = $1::uuid RETURNING " + areaColumns
 
 	var a domain.Area
-	err := r.db.Conn.QueryRow(ctx, query, args...).
-		Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return a, domain.ErrNotFound
-	}
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, query, args...).
+			Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("update area: %w", mapWriteError(err))
+		}
+		return nil
+	})
 	if err != nil {
-		return a, fmt.Errorf("update area: %w", mapWriteError(err))
+		return domain.Area{}, err
 	}
 	return a, nil
 }
@@ -196,42 +216,63 @@ func (r *TwinStateRepoImpl) UpdateArea(ctx context.Context, areaID string, req d
 //   - Area
 //   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetArea(ctx context.Context, areaID string) (domain.Area, error) {
+	homeID, err := r.nodeHome(ctx, areaID, nodeKindArea)
+	if err != nil {
+		return domain.Area{}, err
+	}
+
 	var a domain.Area
-	err := r.db.Conn.QueryRow(ctx, getAreaByIDQuery, areaID).
-		Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, getAreaByIDQuery, areaID).
+			Scan(&a.ID, &a.HomeID, &a.Name, &a.Floor, &a.AreaType, &a.Geometry)
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return a, domain.ErrNotFound
+		return domain.Area{}, domain.ErrNotFound
 	}
 	if err != nil {
-		return a, fmt.Errorf("get area: %w", err)
+		return domain.Area{}, fmt.Errorf("get area: %w", err)
 	}
 	return a, nil
 }
 
 func (r *TwinStateRepoImpl) CreateDevice(ctx context.Context, req domain.CreateDeviceRequest) (domain.Device, error) {
 	var d domain.Device
-	err := r.db.Conn.QueryRow(ctx, createDeviceQuery,
-		req.HomeID, req.AreaID, req.GatewayID, req.ExternalID, req.Name,
-		req.Manufacturer, req.Model, req.SwVersion, req.DeviceType).
-		Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
-			&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
+	err := r.db.WithHome(ctx, req.HomeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, createDeviceQuery,
+			req.HomeID, req.AreaID, req.GatewayID, req.ExternalID, req.Name,
+			req.Manufacturer, req.Model, req.SwVersion, req.DeviceType).
+			Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
+				&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
+		if err != nil {
+			return fmt.Errorf("create device: %w", mapWriteError(err))
+		}
+		if _, err := tx.Exec(ctx, registerNodeQuery, d.ID, nodeKindDevice, req.HomeID); err != nil {
+			return fmt.Errorf("register device: %w", err)
+		}
+		// Route future readings of this (gateway, external id) to the device
+		if _, err := tx.Exec(ctx, registerDeviceQuery, req.GatewayID, req.ExternalID, req.HomeID, d.ID); err != nil {
+			return fmt.Errorf("register device route: %w", mapWriteError(err))
+		}
+		return nil
+	})
 	if err != nil {
-		return d, fmt.Errorf("create device: %w", mapWriteError(err))
+		return domain.Device{}, err
 	}
 	return d, nil
 }
 
 func (r *TwinStateRepoImpl) UpdateDevice(ctx context.Context, deviceID string, req domain.UpdateDeviceRequest) (domain.Device, error) {
+	homeID, err := r.nodeHome(ctx, deviceID, nodeKindDevice)
+	if err != nil {
+		return domain.Device{}, err
+	}
+
 	sets := []string{}
 	args := []any{deviceID}
 
 	if req.Name.Set {
 		args = append(args, req.Name.Value)
 		sets = append(sets, fmt.Sprintf("name = $%d", len(args)))
-	}
-	if req.HomeID.Set {
-		args = append(args, req.HomeID.Value)
-		sets = append(sets, fmt.Sprintf("home_id = $%d::uuid", len(args)))
 	}
 	if req.AreaID.Set {
 		args = append(args, req.AreaID.Value)
@@ -264,14 +305,20 @@ func (r *TwinStateRepoImpl) UpdateDevice(ctx context.Context, deviceID string, r
 		" WHERE id = $1::uuid RETURNING " + deviceColumns
 
 	var d domain.Device
-	err := r.db.Conn.QueryRow(ctx, query, args...).
-		Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
-			&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return d, domain.ErrNotFound
-	}
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, query, args...).
+			Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
+				&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("update device: %w", mapWriteError(err))
+		}
+		return nil
+	})
 	if err != nil {
-		return d, fmt.Errorf("update device: %w", mapWriteError(err))
+		return domain.Device{}, err
 	}
 	return d, nil
 }
@@ -288,34 +335,62 @@ func (r *TwinStateRepoImpl) UpdateDevice(ctx context.Context, deviceID string, r
 //   - Device
 //   - ErrNotFound when missing
 func (r *TwinStateRepoImpl) GetDevice(ctx context.Context, deviceID string) (domain.Device, error) {
+	homeID, err := r.nodeHome(ctx, deviceID, nodeKindDevice)
+	if err != nil {
+		return domain.Device{}, err
+	}
+
 	var d domain.Device
-	err := r.db.Conn.QueryRow(ctx, getDeviceByIDQuery, deviceID).
-		Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
-			&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, getDeviceByIDQuery, deviceID).
+			Scan(&d.ID, &d.HomeID, &d.AreaID, &d.GatewayID, &d.ExternalID, &d.Name,
+				&d.Manufacturer, &d.Model, &d.SwVersion, &d.DeviceType)
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return d, domain.ErrNotFound
+		return domain.Device{}, domain.ErrNotFound
 	}
 	if err != nil {
-		return d, fmt.Errorf("get device: %w", err)
+		return domain.Device{}, fmt.Errorf("get device: %w", err)
 	}
 	return d, nil
 }
 
 func (r *TwinStateRepoImpl) CreateEntity(ctx context.Context, req domain.CreateEntityRequest) (domain.EntityState, error) {
-	var entityID string
-	err := r.db.Conn.QueryRow(ctx, createEntityQuery,
-		req.DeviceID, req.AreaID, req.ExternalEntityID, req.Name,
-		req.Domain, req.DeviceClass, req.Unit, req.Controllable,
-		jsonbParam(req.CommandMap), req.StateTTLSeconds).
-		Scan(&entityID)
+	// The device decides the home, its registry row resolves without a
+	// home context and doubles as the existence check
+	homeID, err := r.nodeHome(ctx, req.DeviceID, nodeKindDevice)
 	if err != nil {
-		return domain.EntityState{}, fmt.Errorf("create entity: %w", mapWriteError(err))
+		return domain.EntityState{}, err
+	}
+
+	var entityID string
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, createEntityQuery,
+			homeID, req.DeviceID, req.AreaID, req.ExternalEntityID, req.Name,
+			req.Domain, req.DeviceClass, req.Unit, req.Controllable,
+			jsonbParam(req.CommandMap), req.StateTTLSeconds).
+			Scan(&entityID)
+		if err != nil {
+			return fmt.Errorf("create entity: %w", mapWriteError(err))
+		}
+		if _, err := tx.Exec(ctx, ensureEntityRegistryQuery, entityID, homeID); err != nil {
+			return fmt.Errorf("register entity: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.EntityState{}, err
 	}
 
 	return r.GetEntityState(ctx, entityID)
 }
 
 func (r *TwinStateRepoImpl) UpdateEntity(ctx context.Context, entityID string, req domain.UpdateEntityRequest) (domain.EntityState, error) {
+	homeID, err := r.nodeHome(ctx, entityID, nodeKindEntity)
+	if err != nil {
+		return domain.EntityState{}, err
+	}
+
 	sets := []string{}
 	args := []any{entityID}
 
@@ -358,12 +433,18 @@ func (r *TwinStateRepoImpl) UpdateEntity(ctx context.Context, entityID string, r
 		" WHERE id = $1::uuid RETURNING id::text"
 
 	var id string
-	err := r.db.Conn.QueryRow(ctx, query, args...).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.EntityState{}, domain.ErrNotFound
-	}
+	err = r.db.WithHome(ctx, homeID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, query, args...).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("update entity: %w", mapWriteError(err))
+		}
+		return nil
+	})
 	if err != nil {
-		return domain.EntityState{}, fmt.Errorf("update entity: %w", mapWriteError(err))
+		return domain.EntityState{}, err
 	}
 
 	return r.GetEntityState(ctx, id)

@@ -28,6 +28,8 @@ Each database runs in its own container. `ingest_db` uses the TimescaleDB image 
 
 ### twin_db (exists)
 
+Per-home isolation is enforced by the database with row level security (see [decision 0002](../decisions/0002-row-level-security.md)): every table below except `homes` and the registries carries `home_id`, a `home_isolation` policy on it, and twin-core opens each transaction with `WithHome` (`internal/db`), which sets the transaction-local `app.home_id`.
+
 | Table | Purpose |
 |---|---|
 | `homes` | One row per home |
@@ -36,6 +38,8 @@ Each database runs in its own container. `ingest_db` uses the TimescaleDB image 
 | `devices` | Normalized device model; each device maps to a gateway-native device |
 | `entities` | Individual sensors/controls on a device; register to rooms directly |
 | `twin_state` | Latest known value per entity; the fast read path for current state |
+| `device_registry` | Routing: `(gateway_id, external_id)` to home and device; routes readings to their home's security context |
+| `node_registry` | Routing: bare node id (area, device, entity, relation) to home; resolves id-addressed API calls before the secured tables |
 
 ### rules_db (planned)
 
