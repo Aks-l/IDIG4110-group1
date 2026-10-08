@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -42,7 +41,7 @@ func (s *SensorIngestSvcImpl) Create(ctx context.Context, payload dto.SensorStat
 	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
 	defer cancel()
 	if err := s.publisher.PublishReading(ctx, ToReading(s.gatewayID, payload)); err != nil {
-		return fmt.Errorf("publishing reading: %w", err)
+		slog.Error("Publishing reading to kafka", "entity", payload.Data.EntityID, "error", err)
 	}
 	return nil
 }
@@ -55,6 +54,7 @@ func ToReading(gatewayID string, ev dto.SensorStateEvent) dto.Reading {
 		GatewayID:        gatewayID,
 		ExternalEntityID: ev.Data.EntityID,
 		Timestamp:        ev.TimeFired,
+		EventID:          ev.Context.ID,
 	}
 
 	state := strings.TrimSpace(ev.Data.NewState.State)
