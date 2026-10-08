@@ -17,7 +17,7 @@ func Normalize(raw dto.RawMessage) (dto.Reading, error) {
 
 	reading := dto.Reading{
 		GatewayID:        raw.GatewayID,
-		ExternalEntityID: raw.Topic,
+		ExternalEntityID: event.EntityID,
 		EventID:          &event.EntityID,
 		Timestamp:        raw.Time,
 		DeviceClass:      attrPtr(event.NewState.Attributes, "device_class"),
