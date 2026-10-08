@@ -16,37 +16,47 @@ Page or hook
 The current endpoint paths and response types are provisional. They provide the
 frontend infrastructure until the backend API contract is agreed and should be
 updated together with the backend documentation when that contract exists.
+Until the backend exposes these endpoints, the placeholder routes in
+`frontend/web/src/app/api` serve the same contract with fixture data; see
+[Placeholder endpoints](#placeholder-endpoints).
 
 ## File Structure
 
 ```text
-frontend/my-app/src/lib/api/
-├── client.ts       Shared HTTP client and error handling
-├── rooms.ts        Room endpoints
-├── devices.ts      Device endpoints
-├── events.ts       Event endpoints
-├── automations.ts  Automation endpoints
-├── overview.ts     Overview endpoints
-├── energy.ts       Energy endpoints
-├── types.ts            Shared response types
-├── mock-data.ts        Centralized development fixtures
-├── data-source.ts      Mock/API source selection
-├── rooms.data.ts       Room data-source adapter
-├── events.data.ts      Event data-source adapter
-├── automations.data.ts Automation data-source adapter
-├── devices.data.ts     Device data-source adapter and mutations
-├── three-d.data.ts     3D layout data-source adapter
-├── overview.data.ts    Overview data-source adapter
-└── energy.data.ts      Energy data-source adapter
+frontend/web/src/lib/api/
+├── client.ts             Shared HTTP client and error handling
+├── rooms.ts              Room endpoints
+├── devices.ts            Device endpoints
+├── events.ts             Event endpoints
+├── automations.ts        Automation endpoints
+├── overview.ts           Overview endpoints
+├── energy.ts             Energy endpoints
+├── 3d-model.ts           3D layout endpoints
+├── types.ts              Shared response types
+├── mock-data.ts          Centralized development fixtures
+├── data-source.ts        Mock/API source selection
+├── rooms.data.ts         Room data-source adapter
+├── events.data.ts       Event data-source adapter
+├── automations.data.ts   Automation data-source adapter
+├── devices.data.ts       Device data-source adapter and mutations
+├── three-d.data.ts       3D layout data-source adapter
+├── overview.data.ts      Overview data-source adapter
+├── energy.data.ts        Energy data-source adapter
+├── placeholder-handler.ts  Placeholder route plumbing: fixtures or proxy
+└── placeholder-store.ts    In-memory state behind the placeholder routes
+
+frontend/web/src/app/api/
+└── Placeholder route handlers, one folder per endpoint (rooms, devices,
+    overview, events, projections, energy, automations, 3d)
 ```
 
 ## Configuration
 
-Create `frontend/my-app/.env.local` for local development:
+Create `frontend/web/.env.local` for local development:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-NEXT_PUBLIC_DATA_SOURCE=mock
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_DATA_SOURCE=api
 ```
 
 `NEXT_PUBLIC_DATA_SOURCE` supports:
@@ -59,6 +69,11 @@ NEXT_PUBLIC_DATA_SOURCE=mock
 `.env.example` documents the required variables and may be committed. `.env.local`
 contains machine-specific settings and must not contain secrets intended for
 client-side use. Restart the Next.js development server after changing variables.
+
+`PLACEHOLDER_API_TARGET` is a server-side variable for the placeholder routes
+(see below): when set, they forward every request to that base URL instead of
+serving fixtures. It is read at request time, so it can change without a
+rebuild.
 
 ## Shared Client
 
@@ -78,6 +93,36 @@ import type { Event } from '@/lib/api/types';
 
 const events = await apiClient<Event[]>('/events');
 ```
+
+## Placeholder endpoints
+
+The backend does not serve this contract yet, so `frontend/web/src/app/api`
+contains Next.js route handlers that implement each endpoint below with
+fixture data. They exist so the frontend exercises its real HTTP path —
+`apiClient`, `ApiError`, loading and error states — without a backend, and so
+the response shapes are verifiable end to end.
+
+- `GET` requests serve the fixtures; `PATCH` and `POST` keep their changes in
+  memory for the lifetime of the server process.
+- The handlers import the same fixtures as mock mode, so `mock` and `api`
+  modes show the same data.
+
+Swapping in the real backend is configuration-only, with two options:
+
+1. Point the browser at the backend: set `NEXT_PUBLIC_API_URL` to its base
+   URL (for example `http://localhost:8080/api`). The placeholder routes are
+   bypassed and can be deleted once every endpoint is real.
+2. Keep the browser on the placeholder routes: set `PLACEHOLDER_API_TARGET`
+   to the backend base URL. Every placeholder route then forwards its request
+   there unchanged, so endpoints can migrate one by one as the backend
+   implements them.
+
+The real backend must serve these paths and shapes under the base URL. Today
+the api-gateway exposes `/api/v1/ingest/*`, `/api/v1/rules*` and
+`/api/v1/incidents*` on host port `8084` (see
+`src/api-gateway/config/config.yaml`), which do not overlap with this
+contract; aligning them is part of the backend work tracked in the checklist
+below.
 
 ## Endpoint Modules
 
@@ -125,6 +170,15 @@ Implemented in `events.ts`:
 | Method | Path | Response |
 | --- | --- | --- |
 | `GET` | `/events` | `Event[]` |
+| `GET` | `/events/:eventId` | `Event` |
+
+### Projections
+
+Implemented in `events.ts`:
+
+| Method | Path | Response |
+| --- | --- | --- |
+| `GET` | `/projections` | `Projection[]` |
 
 ### Energy
 
@@ -132,7 +186,10 @@ Implemented in `energy.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
-| `GET` | `/energy?range=:range` | `EnergyData` |
+| `GET` | `/energy?period=:period&mode=:mode` | `EnergyPageData` |
+
+`period` is `today`, `week`, `month` or `year`; `mode` is `current` or
+`projected`. Both fall back to `today` and `current` when omitted.
 
 ### Automations
 
@@ -141,6 +198,7 @@ Implemented in `automations.ts`:
 | Method | Path | Response |
 | --- | --- | --- |
 | `GET` | `/automations` | `Automation[]` |
+| `POST` | `/automations` | `Automation` |
 | `PATCH` | `/automations/:automationId` | `Automation` |
 
 The automation update currently sends:
@@ -150,6 +208,26 @@ The automation update currently sends:
 	"enabled": true
 }
 ```
+
+The automation create sends an `AutomationDraft`:
+
+```json
+{
+	"name": "Hallway motion light",
+	"description": "Turn on the hallway light when someone walks in at night",
+	"category": "Comfort",
+	"conditions": [{ "kind": "motion", "location": "Hallway" }],
+	"actions": [{ "kind": "device", "deviceName": "Hallway Light", "command": "set", "value": "40%" }]
+}
+```
+
+### 3D layout
+
+Implemented in `3d-model.ts`:
+
+| Method | Path | Response |
+| --- | --- | --- |
+| `GET` | `/3d/rooms` | `RoomLayout[]` |
 
 ## Response Types
 
@@ -227,9 +305,8 @@ The current adapters are:
 | `overview.data.ts` | Overview dashboard data |
 | `energy.data.ts` | Energy range data |
 
-Devices currently have endpoint functions but no separate data adapter. Add a
-`devices.data.ts` adapter when devices also need mock/API switching or local
-fallback behavior.
+The placeholder routes serve the same fixtures over HTTP, so `mock` mode and
+`api` mode show the same data until the real backend is connected.
 
 ## Error Handling
 
@@ -288,4 +365,7 @@ Before switching shared environments to API mode, confirm:
 - Error response format
 - Pagination or filtering requirements for events and history
 
-After agreement, update the API modules, types, and this document together.
+Until each item is confirmed, the placeholder endpoints in
+`frontend/web/src/app/api` stand in for the backend and can be swapped out with
+`NEXT_PUBLIC_API_URL` or `PLACEHOLDER_API_TARGET` as described above. After
+agreement, update the API modules, types, and this document together.
