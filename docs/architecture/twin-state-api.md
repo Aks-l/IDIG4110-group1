@@ -54,6 +54,8 @@ All endpoints are under `/api/v1` and return JSON. `state` is `null` for an enti
 
 Errors use `{"code": <http status>, "message": "<reason>"}`; unknown ids return 404, malformed ids 400.
 
+The frontend reaches all of these through the API gateway, which forwards the same paths to twin-core unchanged; the admin scoping for `GET /api/v1/homes` (and the rest of auth) lands in the gateway, not in twin-core. `/api/v1/readings` is not routed through the gateway: it stays on the internal ingest push path.
+
 An entity with an `area_id` appears both under that area and under its device in the home state view; the frontend picks the grouping it needs.
 
 ### Filtering and pagination on `GET /api/v1/state`

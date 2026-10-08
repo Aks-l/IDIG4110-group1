@@ -121,6 +121,8 @@ services:
         condition: service_started
       rules-engine:
         condition: service_started
+      twin-core:
+        condition: service_started
 
   ingest-service:
     build:
