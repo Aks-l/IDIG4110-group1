@@ -1,0 +1,24 @@
+server:
+  port: 8080
+  readTimout: 10
+  writeTimout: 10
+  idleTimout: 30
+  maxHeaderBytes: 1048576
+  shutdownTimeout: 10
+
+proxy:
+  responseHeaderTimeout: 30
+
+health:
+  timeout: 3
+
+upstreams:
+  - name: ingest
+    prefix: /api/v1/ingest
+    url: http://ingest-service:8080
+  - name: rules
+    prefix: /api/v1/rules
+    url: http://rules-engine:8080
+  - name: incidents
+    prefix: /api/v1/incidents
+    url: http://rules-engine:8080

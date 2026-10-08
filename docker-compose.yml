@@ -101,6 +101,21 @@ services:
       timeout: 5s
       retries: 5
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/dev/api-gateway.Dockerfile
+    ports:
+      - "8084:8080"
+    volumes:
+      - ./src/api-gateway:/app
+      - ./src/shared:/shared
+    depends_on:
+      ingest-service:
+        condition: service_started
+      rules-engine:
+        condition: service_started
+
   ingest-service:
     build:
       context: .
