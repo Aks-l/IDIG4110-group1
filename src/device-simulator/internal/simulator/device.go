@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -205,7 +206,7 @@ func (d *genericDevice) readings(now time.Time) []Reading {
 func (d *genericDevice) ApplyCommand(command dto.Command) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if command.ExternalEntityID != d.info.ID && command.ExternalEntityID != d.topicID() {
+	if !d.addresses(command.ExternalEntityID) {
 		return fmt.Errorf("command targets %q, device is %q", command.ExternalEntityID, d.info.ID)
 	}
 	switch command.Command {
@@ -245,6 +246,18 @@ func (d *genericDevice) ApplyCommand(command dto.Command) error {
 		return fmt.Errorf("unsupported command %q", command.Command)
 	}
 	return nil
+}
+
+// addresses reports whether the command's external entity id targets this
+// device: the device id itself, an entity id of one of its properties
+// ("{device_id}.{property}", the form readings publish), or the legacy
+// state topic.
+func (d *genericDevice) addresses(externalEntityID string) bool {
+	if externalEntityID == d.info.ID || externalEntityID == d.topicID() {
+		return true
+	}
+	deviceID, _, found := strings.Cut(externalEntityID, ".")
+	return found && deviceID == d.info.ID
 }
 
 func (d *genericDevice) topicID() string {

@@ -12,9 +12,12 @@ import (
 	"syscall"
 	"time"
 
+	"IDIG4110/ingest-service/internal/commands"
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
+	"IDIG4110/ingest-service/internal/domain"
 
+	"IDIG4110/shared/kafka"
 	"IDIG4110/shared/migrate"
 
 	"IDIG4110/ingest-service/internal/mqttclient"
@@ -45,10 +48,29 @@ func Run() error {
 		return fmt.Errorf("migration status check failed: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Readings continue on to the event bus when brokers are configured;
+	// with none, ingest only stores them (docs/decisions/0001-kafka-event-bus.md).
+	var publisher domain.ReadingPublisher
+	brokers := kafka.ParseBrokers(cfg.Kafka.Brokers)
+	if len(brokers) > 0 {
+		producer, err := kafka.NewProducer(brokers)
+		if err != nil {
+			return err
+		}
+		defer producer.Close()
+		publisher = readingPublisher{producer}
+		slog.Info("publishing readings", "topic", kafka.TopicReadings, "brokers", cfg.Kafka.Brokers)
+	} else {
+		slog.Warn("No Kafka brokers configured: readings are stored but not published")
+	}
+
 	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
 	sensorIngestSvc := service.NewImplSensorIngestSvc(
 		sensorIngestRepo,
-		nil,
+		publisher,
 		"",
 	)
 
@@ -70,6 +92,22 @@ func Run() error {
 
 	if err := client.Subscribe(cfg.Mqtt.Topic); err != nil {
 		return err
+	}
+
+	// Device commands travel the other way: from the event bus back to the
+	// gateway over MQTT (docs/architecture/gateway-api.md).
+	if len(brokers) > 0 {
+		consumer, err := kafka.NewConsumer(brokers, cfg.Kafka.CommandsGroup, kafka.TopicCommands)
+		if err != nil {
+			return err
+		}
+		defer consumer.Close()
+		go func() {
+			if err := consumer.Run(ctx, commands.NewForwarder(client).Handle); err != nil && !errors.Is(err, context.Canceled) {
+				slog.Error("Command forwarding stopped", "error", err)
+			}
+		}()
+		slog.Info("consuming device commands", "topic", kafka.TopicCommands, "group", cfg.Kafka.CommandsGroup)
 	}
 
 	router := NewRouter(sensorIngestSvc)

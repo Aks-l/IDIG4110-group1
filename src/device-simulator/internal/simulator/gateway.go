@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -108,19 +109,35 @@ func (g *Gateway) Simulate(now time.Time) ([]Reading, error) {
 }
 
 func (g *Gateway) ApplyCommand(command dto.Command, now time.Time) ([]Reading, error) {
-	g.mu.RLock()
-	device, ok := g.devices[command.ExternalEntityID]
-	g.mu.RUnlock()
+	device, ok := g.deviceFor(command.ExternalEntityID)
 	if !ok {
 		return nil, fmt.Errorf("device %q not found on gateway %q", command.ExternalEntityID, g.id)
 	}
 	if err := device.ApplyCommand(command); err != nil {
 		return nil, err
 	}
-	if err := g.storage.SaveStateChange(StateChange{DeviceID: command.ExternalEntityID, State: device.State(), Time: now}); err != nil {
+	if err := g.storage.SaveStateChange(StateChange{DeviceID: device.Info().ID, State: device.State(), Time: now}); err != nil {
 		return nil, err
 	}
 	return device.Simulate(now), nil
+}
+
+// deviceFor resolves an external entity id to its device. Commands address
+// entities (docs/architecture/gateway-api.md) and readings identify them
+// as "{device_id}.{property}", so both "light_1" and "light_1.on" resolve
+// to the light_1 device.
+func (g *Gateway) deviceFor(externalEntityID string) (Device, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if device, ok := g.devices[externalEntityID]; ok {
+		return device, true
+	}
+	deviceID, _, found := strings.Cut(externalEntityID, ".")
+	if !found {
+		return nil, false
+	}
+	device, ok := g.devices[deviceID]
+	return device, ok
 }
 
 func (g *Gateway) Storage() Storage {

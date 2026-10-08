@@ -47,8 +47,12 @@ func Init(cfg config.MqttConfig, msg mqtt.MessageHandler) (*MqttClient, error) {
 	}, nil
 }
 
+// Subscribe registers the reading topic at QoS 1, matching the
+// at-least-once guarantee of the reading model
+// (docs/architecture/mqtt-envelope.md). With cleanSession false, the
+// persistent session also queues messages while the client reconnects.
 func (c *MqttClient) Subscribe(topic string) error {
-	token := c.client.Subscribe(topic, 0, nil)
+	token := c.client.Subscribe(topic, 1, nil)
 	token.Wait()
 	return token.Error()
 }

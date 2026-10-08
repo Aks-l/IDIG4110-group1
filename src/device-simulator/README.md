@@ -25,7 +25,10 @@ entity ID is `{device_id}.{property}`.
 
 The simulator listens for commands on
 `twin/{gateway_id}/commands`, so the existing rules-engine command path can
-control configured devices. The gateway keeps device state in memory and
+control configured devices. A command may address the device
+(`light_1`) or one of its entities (`light_1.on`); the entity form is what
+readings publish and the command path uses. The gateway keeps device state
+in memory and
 persists readings through the `Storage` interface. A database-backed storage
 implementation can replace `MemoryStorage` without changing device logic.
 

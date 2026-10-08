@@ -62,6 +62,40 @@ func TestGatewayUpdatesSupportedDevice(t *testing.T) {
 	}
 }
 
+func TestGatewayAppliesEntityAddressedCommand(t *testing.T) {
+	gateway, err := NewGateway(testHouse(), NewMemoryStorage())
+	if err != nil {
+		t.Fatal(err)
+	}
+	readings, err := gateway.ApplyCommand(dto.Command{
+		ExternalEntityID: "light_1.on", Command: "turn_on",
+	}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, ok := gateway.DeviceState("light_1")
+	if !ok || state["on"] != true {
+		t.Fatalf("expected light_1 to be on after command, got %v", state)
+	}
+	for _, reading := range readings {
+		if reading.DeviceID == "light_1" && reading.Property == "on" && reading.State == "true" {
+			return
+		}
+	}
+	t.Fatal("expected on reading after entity addressed command")
+}
+
+func TestGatewayRejectsUnknownEntityCommand(t *testing.T) {
+	gateway, err := NewGateway(testHouse(), NewMemoryStorage())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = gateway.ApplyCommand(dto.Command{ExternalEntityID: "unknown_1.on", Command: "turn_on"}, time.Now())
+	if err == nil {
+		t.Fatal("expected unknown entity command to fail")
+	}
+}
+
 func TestConfiguredMotionProbabilityCanForceMotion(t *testing.T) {
 	always := 1.0
 	house := testHouse()
