@@ -50,6 +50,12 @@ func (b *Broker) Publish(topic string, qos byte, payload []byte) error {
 	return token.Error()
 }
 
+func (b *Broker) Subscribe(topic string, handler mqtt.MessageHandler) error {
+	token := b.client.Subscribe(topic, 1, handler)
+	token.Wait()
+	return token.Error()
+}
+
 func (b *Broker) Close() {
 	b.client.Disconnect(disconnectTime)
 }
