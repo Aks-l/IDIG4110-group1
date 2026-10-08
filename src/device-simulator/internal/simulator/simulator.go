@@ -43,6 +43,13 @@ func (s *Simulator) run(id string) {
 		event := sensor.Generate()
 		//mock := GenerateMockData(id)
 
+		slog.Info(
+			"generated temperature",
+			"deviceId", id,
+			"temperature", event.NewState.State,
+			"unit", event.NewState.Attributes["unit_of_measurement"],
+		)
+
 		payload, err := json.Marshal(event)
 		if err != nil {
 			slog.Error("JSON marshal failed",
