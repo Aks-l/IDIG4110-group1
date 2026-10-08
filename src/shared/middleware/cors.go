@@ -2,7 +2,7 @@ package middleware
 
 import "net/http"
 
-// CORS allows the frontend to call the gateway during development.
+// CORS allows frontends to call the API during development.
 func CORS() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

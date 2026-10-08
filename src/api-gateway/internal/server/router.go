@@ -6,8 +6,8 @@ import (
 
 	"IDIG4110/api-gateway/internal/config"
 	"IDIG4110/api-gateway/internal/handlers"
-	"IDIG4110/api-gateway/internal/middleware"
 	"IDIG4110/api-gateway/internal/proxy"
+	"IDIG4110/shared/middleware"
 )
 
 func NewRouter(cfg *config.Config) (http.Handler, error) {
