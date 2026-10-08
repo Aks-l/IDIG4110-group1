@@ -1,0 +1,77 @@
+{
+  "house": {
+    "id": "house_1",
+    "name": "Smart Home",
+    "gateway_id": "00000000-0000-0000-0000-000000000001",
+    "rooms": [
+      {
+        "id": "living_room",
+        "name": "Living Room",
+        "devices": [
+          {
+            "id": "temperature_1",
+            "type": "temperature_sensor",
+            "initial_state": { "temperature": 21.5 }
+          },
+          {
+            "id": "humidity_1",
+            "type": "humidity_sensor",
+            "initial_state": { "humidity": 45.0 }
+          },
+          {
+            "id": "light_1",
+            "type": "smart_light",
+            "initial_state": { "on": false, "brightness": 80 }
+          },
+          {
+            "id": "ac_1",
+            "type": "air_conditioner",
+            "initial_state": {
+              "on": true,
+              "current_temperature": 24.0,
+              "target_temperature": 21.0,
+              "mode": "cool"
+            }
+          }
+        ]
+      },
+      {
+        "id": "kitchen",
+        "name": "Kitchen",
+        "devices": [
+          {
+            "id": "oven_1",
+            "type": "smart_oven",
+            "initial_state": {
+              "on": false,
+              "current_temperature": 22.0,
+              "target_temperature": 180.0,
+              "mode": "conventional"
+            }
+          },
+          {
+            "id": "plug_1",
+            "type": "smart_plug",
+            "initial_state": { "on": false, "power": 0.0 }
+          }
+        ]
+      },
+      {
+        "id": "hallway",
+        "name": "Hallway",
+        "devices": [
+          {
+            "id": "motion_1",
+            "type": "motion_sensor",
+            "initial_state": { "motion": false }
+          },
+          {
+            "id": "door_1",
+            "type": "door_sensor",
+            "initial_state": { "open": false }
+          }
+        ]
+      }
+    ]
+  }
+}
