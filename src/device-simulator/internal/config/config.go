@@ -23,6 +23,7 @@ type MqttConfig struct {
 	Topic                string `yaml:"topic"`
 	Interval             int    `yaml:"interval"`
 	DeviceCount          int    `yaml:"deviceCount"`
+	GatewayID            string `yaml:"gatewayId"`
 }
 
 func Load(configPath string) (*Config, error) {

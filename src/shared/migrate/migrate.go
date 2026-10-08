@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -28,6 +29,14 @@ func Init(directory, url string) (*Migrator, error) {
 	return &Migrator{
 		Migrate: m,
 	}, nil
+}
+
+// Up applies all pending migrations. Having nothing to apply is not an error.
+func (m *Migrator) Up() error {
+	if err := m.Migrate.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("applying migrations: %w", err)
+	}
+	return nil
 }
 
 func (m *Migrator) CheckMigrationStatus() error {

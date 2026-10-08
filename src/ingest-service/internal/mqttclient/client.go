@@ -1,6 +1,7 @@
 package mqttclient
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -49,6 +50,16 @@ func Init(cfg config.MqttConfig, msg mqtt.MessageHandler) (*MqttClient, error) {
 func (c *MqttClient) Subscribe(topic string) error {
 	token := c.client.Subscribe(topic, 0, nil)
 	token.Wait()
+	return token.Error()
+}
+
+const publishTimeout = 10 * time.Second
+
+func (c *MqttClient) Publish(topic string, qos byte, payload []byte) error {
+	token := c.client.Publish(topic, qos, false, payload)
+	if !token.WaitTimeout(publishTimeout) {
+		return fmt.Errorf("publish to %s timed out", topic)
+	}
 	return token.Error()
 }
 

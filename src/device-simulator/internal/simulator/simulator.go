@@ -8,6 +8,7 @@ import (
 
 	"IDIG4110/device-simulator/internal/broker"
 	"IDIG4110/device-simulator/internal/config"
+	"IDIG4110/shared/dto"
 )
 
 type Simulator struct {
@@ -15,6 +16,7 @@ type Simulator struct {
 	interval    int
 	topic       string
 	deviceCount int
+	gatewayID   string
 	qos         byte
 }
 
@@ -24,51 +26,45 @@ func Init(b *broker.Broker, cfg config.MqttConfig) *Simulator {
 		interval:    cfg.Interval,
 		topic:       cfg.Topic,
 		deviceCount: cfg.DeviceCount,
+		gatewayID:   cfg.GatewayID,
 		qos:         byte(0),
 	}
 }
 
 func (s *Simulator) Start() {
 	for i := 0; i < s.deviceCount; i++ {
-		eventId := fmt.Sprintf("b%015d", i+1)
-		go s.run(eventId)
+		entityID := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
+		go s.run(entityID)
 	}
 	select {}
 }
 
 func (s *Simulator) run(id string) {
-	sensor := NewTemperatureSensor(id)
-
+	temperature := 20.0
 	for {
-		event := sensor.Generate()
-		//mock := GenerateMockData(id)
+		temperature = NextTemperature(temperature)
 
 		slog.Info(
 			"generated temperature",
-			"deviceId", id,
-			"temperature", event.NewState.State,
-			"unit", event.NewState.Attributes["unit_of_measurement"],
+			"deviceID", id,
+			"temperature", temperature,
+			"unit", "°C",
 		)
 
-		payload, err := json.Marshal(event)
-		if err != nil {
-			slog.Error("JSON marshal failed",
-				"devicedID", id,
-				"error", err,
-			)
-			continue
+		event := GenerateMockData(id, temperature)
+
+		payload, _ := json.Marshal(event)
+
+		raw := dto.RawMessage{
+			Time:      event.TimeFired,
+			GatewayID: s.gatewayID,
+			Topic:     fmt.Sprintf("%s/%s/%s", s.topic, id, "state"),
+			Payload:   payload,
 		}
 
-		topic := fmt.Sprintf("%s/%s/%s", s.topic, id, "state")
+		envelope, _ := json.Marshal(raw)
 
-		if err := s.broker.Publish(topic, s.qos, payload); err != nil {
-			slog.Error(
-				"failed to publish message",
-				"deviceId", id,
-				"topic", topic,
-				"error", err,
-			)
-		}
+		s.broker.Publish(raw.Topic, s.qos, envelope)
 
 		time.Sleep(time.Duration(s.interval) * time.Second)
 	}
