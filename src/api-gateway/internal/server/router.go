@@ -20,6 +20,7 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("upstream %s: %w", u.Name, err)
 		}
+		mux.Handle(u.Prefix, p)
 		mux.Handle(u.Prefix+"/", p)
 		healthUpstreams = append(healthUpstreams, handlers.Upstream{Name: u.Name, Url: u.Url})
 	}
