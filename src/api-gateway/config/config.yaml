@@ -12,6 +12,6 @@ upstreams:
   - name: rules
     prefix: /api/v1/rules
     url: http://rules-engine:8080
-  - name: rules-engine
-    prefix: /api/v1/rules-engine
+  - name: incidents
+    prefix: /api/v1/incidents
     url: http://rules-engine:8080
