@@ -38,6 +38,7 @@ type genericDevice struct {
 	info        DeviceInfo
 	state       map[string]any
 	lastReading map[string]string
+	simulation  config.SimulationConfig
 }
 
 var capabilitiesByType = map[string][]string{
@@ -66,6 +67,7 @@ func NewDevice(roomID string, cfg config.Device) (Device, error) {
 		info:        DeviceInfo{ID: cfg.ID, RoomID: roomID, Type: cfg.Type, Capabilities: append([]string(nil), capabilities...)},
 		state:       state,
 		lastReading: map[string]string{},
+		simulation:  cfg.Simulation,
 	}, nil
 }
 
@@ -91,34 +93,76 @@ func (d *genericDevice) Simulate(now time.Time) []Reading {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	if d.simulation.Enabled != nil && !*d.simulation.Enabled {
+		return d.readings(now)
+	}
+
 	switch d.info.Type {
 	case "temperature_sensor":
-		d.state["temperature"] = NextTemperature(number(d.state["temperature"], 21))
+		d.state["temperature"] = d.nextTemperature(number(d.state["temperature"], 21))
 	case "humidity_sensor":
-		d.state["humidity"] = clamp(number(d.state["humidity"], 45)+(rand.Float64()*2-1), 20, 80)
+		humidity := d.simulationRange(d.simulation.Humidity, 20, 80, 1)
+		d.state["humidity"] = clamp(number(d.state["humidity"], 45)+(rand.Float64()*2-1)*humidity.change, humidity.min, humidity.max)
 	case "motion_sensor":
-		d.state["motion"] = rand.Float64() < 0.15
+		d.state["motion"] = rand.Float64() < pointerFloat(d.simulation.MotionProbability, 0.15)
 	case "door_sensor":
-		d.state["open"] = rand.Float64() < 0.05
+		d.state["open"] = rand.Float64() < pointerFloat(d.simulation.OpenProbability, 0.05)
 	case "air_conditioner", "smart_oven", "thermostat":
 		if d.info.Type != "thermostat" && !boolean(d.state["on"]) {
 			break
 		}
 		current := number(d.state["current_temperature"], 21)
 		target := number(d.state["target_temperature"], 21)
-		d.state["current_temperature"] = current + clamp(target-current, -0.5, 0.5)
+		step := pointerFloat(d.simulation.TemperatureStep, 0.5)
+		d.state["current_temperature"] = current + clamp(target-current, -step, step)
 	case "smart_plug":
 		if boolean(d.state["on"]) {
-			d.state["power"] = 60.0 + rand.Float64()*20
+			power := d.simulationRange(d.simulation.Power, 60, 80, 0)
+			d.state["power"] = power.min + rand.Float64()*(power.max-power.min)
 		} else {
 			d.state["power"] = 0.0
 		}
 	case "energy_sensor":
-		power := number(d.state["power"], 100)
-		d.state["power"] = power + (rand.Float64()*10 - 5)
-		d.state["energy"] = number(d.state["energy"], 0) + power/360.0
+		powerSettings := d.simulationRange(d.simulation.Power, 50, 200, 5)
+		power := number(d.state["power"], powerSettings.min)
+		power += (rand.Float64()*2 - 1) * powerSettings.change
+		d.state["power"] = clamp(power, powerSettings.min, powerSettings.max)
+		d.state["energy"] = number(d.state["energy"], 0) + power*pointerFloat(d.simulation.EnergyPerTick, 1.0/360.0)
 	}
 	return d.readings(now)
+}
+
+type simulationRange struct {
+	min, max, change float64
+}
+
+func (d *genericDevice) nextTemperature(current float64) float64 {
+	settings := d.simulationRange(d.simulation.Temperature, 16, 28, 0.2)
+	target := 21.0
+	if settings.min > target {
+		target = settings.min
+	}
+	if settings.max < target {
+		target = settings.max
+	}
+	next := current + (target-current)*0.05 + (rand.Float64()*2-1)*settings.change
+	return clamp(next, settings.min, settings.max)
+}
+
+func (d *genericDevice) simulationRange(settings config.NumericRange, defaultMin, defaultMax, defaultChange float64) simulationRange {
+	min := pointerFloat(settings.Min, defaultMin)
+	max := pointerFloat(settings.Max, defaultMax)
+	if max < min {
+		max = min
+	}
+	return simulationRange{min: min, max: max, change: pointerFloat(settings.MaxChange, defaultChange)}
+}
+
+func pointerFloat(value *float64, fallback float64) float64 {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 func (d *genericDevice) readings(now time.Time) []Reading {

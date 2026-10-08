@@ -61,3 +61,29 @@ func TestGatewayUpdatesSupportedDevice(t *testing.T) {
 		t.Fatal("expected state reading after command")
 	}
 }
+
+func TestConfiguredMotionProbabilityCanForceMotion(t *testing.T) {
+	always := 1.0
+	house := testHouse()
+	house.Rooms[0].Devices = append(house.Rooms[0].Devices, config.Device{
+		ID: "motion_1", Type: "motion_sensor",
+		Simulation: config.SimulationConfig{MotionProbability: &always},
+	})
+	gateway, err := NewGateway(house, NewMemoryStorage())
+	if err != nil {
+		t.Fatal(err)
+	}
+	readings, err := gateway.Simulate(time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, reading := range readings {
+		if reading.DeviceID == "motion_1" && reading.Property == "motion" && reading.State == "true" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected configured motion sensor to report true")
+	}
+}
