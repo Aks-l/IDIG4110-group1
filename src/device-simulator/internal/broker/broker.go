@@ -14,7 +14,7 @@ const (
 )
 
 type Broker struct {
-	client mqtt.Client 
+	client mqtt.Client
 }
 
 func Init(cfg config.MqttConfig) (*Broker, error) {
@@ -27,7 +27,7 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 		SetKeepAlive(time.Duration(cfg.KeepAlive) * time.Second).
 		SetPingTimeout(time.Duration(cfg.PingTimeout) * time.Second).
 		SetCleanSession(cfg.CleanSession)
-	
+
 	opts.OnConnect = func(c mqtt.Client) {
 		slog.Info("MQTT Connected")
 	}
