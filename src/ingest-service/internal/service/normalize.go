@@ -3,10 +3,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"IDIG4110/shared/dto"
 )
+
+var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
 
 // Normalize converts a raw gateway message into a normalized reading
 func Normalize(raw dto.RawMessage) (dto.Reading, error) {
@@ -18,11 +21,13 @@ func Normalize(raw dto.RawMessage) (dto.Reading, error) {
 	reading := dto.Reading{
 		GatewayID:        raw.GatewayID,
 		ExternalEntityID: event.EntityID,
-		EventID:          &event.EntityID,
 		Timestamp:        raw.Time,
 		DeviceClass:      attrPtr(event.NewState.Attributes, "device_class"),
 		Unit:             attrPtr(event.NewState.Attributes, "unit_of_measurement"),
 		Attributes:       map[string]any{},
+	}
+	if uuidPattern.MatchString(event.EntityID) {
+		reading.EventID = &event.EntityID
 	}
 
 	for key, value := range event.NewState.Attributes {
