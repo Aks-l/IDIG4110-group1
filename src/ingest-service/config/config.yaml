@@ -1,6 +1,6 @@
 server:
   port: 8080
-  readTimout: 10
+  readTimeout: 10
   writeTimout: 10
   idleTimout: 30
   maxHeaderBytes: 1048576
