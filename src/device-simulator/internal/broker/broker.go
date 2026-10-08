@@ -33,7 +33,7 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 	}
 
 	opts.OnConnectionLost = func(c mqtt.Client, err error) {
-		slog.Info("MQTT Connection lost")
+		slog.Info("MQTT Connection lost", "error", err)
 	}
 
 	c := mqtt.NewClient(opts)
