@@ -111,7 +111,8 @@ All paths are under `/api/v1`. Bodies are JSON.
 | `GET` | `/incidents?home_id=&status=&limit=` | Newest first, at most 100 by default |
 | `POST` | `/incidents/{id}/acknowledge` | `open` to `acknowledged` |
 | `POST` | `/incidents/{id}/resolve` | To `resolved`. Returns `409` if it is already resolved |
-| `GET` | `/healthz` | Liveness and readiness |
+| `GET` | `/healthz` | Liveness: the process is up |
+| `GET` | `/readyz` | Readiness: rules_db answers a ping |
 
 ## Built-in rules
 
@@ -163,6 +164,24 @@ see `infra/k8s/rules-engine.yaml`.
   [infra/skyhigh/README.md](../../infra/skyhigh/README.md#services-on-k3s).
   `ingest-service` is not deployed to the cluster yet, so on SkyHiGh the engine
   receives no readings until it is.
+
+## Delivery semantics
+
+The engine consumes `twin.readings` with liveness over completeness: one
+skipped reading is cheaper than a consumer stuck on a poison record.
+
+- A handler error is logged and the record is skipped; it is not retried.
+- A crash replays up to about 5 seconds of records (the autocommit interval),
+  so a firing can run twice. Incidents are deduplicated by a unique
+  constraint on `(rule_id, triggered_at)`; commands are deduplicated by the
+  ingest adapter by command id.
+- After a restart the in-memory state is empty until each entity reports
+  again, and a brand new consumer group starts at the newest records
+  (`ConsumeResetOffset(AtEnd)` in `src/shared/kafka`); replaying full history
+  is a deliberate operation, not the default.
+- A reading is stored in ingest_db before it is published, so a failed
+  publish leaves it stored but unpublished and this engine misses it. The
+  latest-wins state model self heals on the next report of the entity.
 
 ## Limitations and next steps
 
