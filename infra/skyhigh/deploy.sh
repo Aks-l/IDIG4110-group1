@@ -92,7 +92,7 @@ sudo chown 1000:1000 /srv/kafka/data
 sudo docker compose up -d --remove-orphans
 echo "  waiting for databases to report healthy"
 for _ in $(seq 1 30); do
-  [ "$(sudo docker compose ps --format '{{.Health}}' | grep -c healthy)" -ge 4 ] && break
+  [ "$(sudo docker compose ps --format '{{.Health}}' | grep -cx healthy)" -ge 4 ] && break
   sleep 3
 done
 sudo docker compose ps --format 'table {{.Name}}\t{{.Status}}'

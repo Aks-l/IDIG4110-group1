@@ -14,16 +14,15 @@ const publishTimeout = 5 * time.Second
 type SensorIngestSvcImpl struct {
 	repo      domain.SensorIngestRepo
 	publisher domain.ReadingPublisher
-	gatewayID string
 }
 
 // NewImplSensorIngestSvc stores events through repo and, when publisher is
-// not nil, publishes them as normalized readings from gatewayID.
-func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher, gatewayID string) *SensorIngestSvcImpl {
+// not nil, publishes them as normalized readings. The reading carries its own
+// gateway_id from the message; the service does not override it.
+func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher) *SensorIngestSvcImpl {
 	return &SensorIngestSvcImpl{
 		repo:      repo,
 		publisher: publisher,
-		gatewayID: gatewayID,
 	}
 }
 
@@ -55,8 +54,8 @@ func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, raw dto.RawMessage)
 	return s.repo.InsertRawMessage(ctx, raw)
 }
 
-func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {
-	data, err := s.repo.FindByTimeRange(ctx, entityId, from, to)
+func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityID string, from, to *time.Time) ([]dto.Reading, error) {
+	data, err := s.repo.FindByTimeRange(ctx, entityID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +63,8 @@ func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string
 	return data, nil
 }
 
-func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
-	sensors, err := s.repo.FindSensors(ctx, sensorID)
+func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, entityID *string) ([]domain.Sensor, error) {
+	sensors, err := s.repo.FindSensors(ctx, entityID)
 	if err != nil {
 		return nil, err
 	}

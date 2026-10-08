@@ -1,2 +1,6 @@
+DROP TABLE IF EXISTS device_registry;
+DROP TABLE IF EXISTS node_registry;
 DROP TABLE IF EXISTS areas;
 DROP TABLE IF EXISTS homes;
+DROP OWNED BY twin_app;
+DROP ROLE IF EXISTS twin_app;

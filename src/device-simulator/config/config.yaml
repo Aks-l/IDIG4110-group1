@@ -5,7 +5,7 @@ mqtt:
   connectRetry: true
   connectRetryInterval: 5
   keepAlive: 30
-  pingTimeOut: 10
+  pingTimeout: 10
   cleanSession: false
   topic: "sensors"
   interval: 10

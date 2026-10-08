@@ -1,6 +1,6 @@
 server:
   port: 8080
-  readTimout: 10
+  readTimeout: 10
   writeTimout: 10
   idleTimout: 30
   maxHeaderBytes: 1048576
@@ -22,3 +22,21 @@ upstreams:
   - name: incidents
     prefix: /api/v1/incidents
     url: http://rules-engine:8080
+  - name: homes
+    prefix: /api/v1/homes
+    url: http://twin-core:8080
+  - name: areas
+    prefix: /api/v1/areas
+    url: http://twin-core:8080
+  - name: devices
+    prefix: /api/v1/devices
+    url: http://twin-core:8080
+  - name: entities
+    prefix: /api/v1/entities
+    url: http://twin-core:8080
+  - name: relations
+    prefix: /api/v1/relations
+    url: http://twin-core:8080
+  - name: state
+    prefix: /api/v1/state
+    url: http://twin-core:8080

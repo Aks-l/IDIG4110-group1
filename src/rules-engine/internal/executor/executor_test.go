@@ -112,3 +112,16 @@ func TestExecuteContinuesAfterAFailedAction(t *testing.T) {
 		t.Fatalf("command should still be sent and firing recorded: records=%d fired=%d", len(p.records), len(s.fired))
 	}
 }
+
+func TestExecuteSkipsReplayedIncident(t *testing.T) {
+	s, p := &fakeStore{failWith: store.ErrConflict}, &fakePublisher{}
+	if err := New(s, p, time.Minute).Execute(context.Background(), smokeFiring()); err != nil {
+		t.Fatalf("a replayed incident is a skip, not a failure: %v", err)
+	}
+	if len(p.records) != 1 || p.records[0].topic != kafka.TopicCommands {
+		t.Fatalf("records = %v, want only the command without a second incident event", p.records)
+	}
+	if len(s.fired) != 1 {
+		t.Fatal("firing not recorded")
+	}
+}

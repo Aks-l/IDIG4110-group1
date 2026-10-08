@@ -1,6 +1,6 @@
 server:
   port: 8080
-  readTimout: 10
+  readTimeout: 10
   writeTimout: 10
   idleTimout: 30
   maxHeaderBytes: 1048576
@@ -20,7 +20,7 @@ mqtt:
   connectRetry: true
   connectRetryInterval: 5
   keepAlive: 30
-  pingTimeOut: 10
+  pingTimeout: 10
   cleanSession: false
   workerCount: 10
   workerBufferSize: 1000
@@ -31,7 +31,5 @@ migration:
 
 kafka:
   brokers: "kafka:29092"
-  # The simulator stands in for one gateway until gateways are registered.
-  gatewayId: "11111111-1111-1111-1111-111111111111"
   commandsGroup: "ingest-service-commands"
   

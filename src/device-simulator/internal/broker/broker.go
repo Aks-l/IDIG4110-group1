@@ -8,10 +8,13 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-const disconnectTime = 250 // in millis
+const (
+	disconnectTime = 250 // milliseconds
+	publishTimeout = 10 * time.Second
+)
 
 type Broker struct {
-	client mqtt.Client 
+	client mqtt.Client
 }
 
 func Init(cfg config.MqttConfig) (*Broker, error) {
@@ -24,13 +27,13 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 		SetKeepAlive(time.Duration(cfg.KeepAlive) * time.Second).
 		SetPingTimeout(time.Duration(cfg.PingTimeout) * time.Second).
 		SetCleanSession(cfg.CleanSession)
-	
+
 	opts.OnConnect = func(c mqtt.Client) {
 		slog.Info("MQTT Connected")
 	}
 
 	opts.OnConnectionLost = func(c mqtt.Client, err error) {
-		slog.Info("MQTT Connection lost")
+		slog.Info("MQTT Connection lost", "error", err)
 	}
 
 	c := mqtt.NewClient(opts)
@@ -45,8 +48,14 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 }
 
 func (b *Broker) Publish(topic string, qos byte, payload []byte) {
-	token := b.client.Publish(topic,qos, false, payload)
-	token.Wait()
+	token := b.client.Publish(topic, qos, false, payload)
+	if !token.WaitTimeout(publishTimeout) {
+		slog.Error("Publish timed out", "topic", topic)
+		return
+	}
+	if err := token.Error(); err != nil {
+		slog.Error("Publish failed", "topic", topic, "error", err)
+	}
 }
 
 func (b *Broker) Close() {

@@ -41,6 +41,8 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 		slog.Error("Failed to store raw message", "error", err, "topic", raw.Topic)
 	}
 
+	// The topic only routes the message to a worker for per-entity ordering;
+	// the sensor's identity lives in the payload (see service.Normalize).
 	workerIndex := hash(raw.Topic) % len(c.workers)
 
 	select {
