@@ -4,6 +4,13 @@ server:
   writeTimout: 10
   idleTimout: 30
   maxHeaderBytes: 1048576
+  shutdownTimeout: 10
+
+proxy:
+  responseHeaderTimeout: 30
+
+health:
+  timeout: 3
 
 upstreams:
   - name: ingest

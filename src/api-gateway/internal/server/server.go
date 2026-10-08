@@ -53,7 +53,7 @@ func Run() error {
 			return fmt.Errorf("listen %w", err)
 		}
 	case <-shutdown:
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Server.ShutdownTimeout)*time.Second)
 		defer cancel()
 		slog.Info("Closing server")
 

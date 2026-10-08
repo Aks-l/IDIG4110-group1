@@ -13,7 +13,7 @@ import (
 	"IDIG4110/shared/httperror"
 )
 
-func New(target string) (http.Handler, error) {
+func New(target string, responseHeaderTimeout time.Duration) (http.Handler, error) {
 	u, err := url.Parse(target)
 	if err != nil {
 		return nil, fmt.Errorf("parsing upstream url %q: %w", target, err)
@@ -25,7 +25,7 @@ func New(target string) (http.Handler, error) {
 			pr.SetXForwarded()
 		},
 		Transport: &http.Transport{
-			ResponseHeaderTimeout: 30 * time.Second,
+			ResponseHeaderTimeout: responseHeaderTimeout,
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			if os.IsTimeout(err) {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestProxyForwardsRequest(t *testing.T) {
@@ -20,7 +21,7 @@ func TestProxyForwardsRequest(t *testing.T) {
 	}))
 	defer backend.Close()
 
-	p, err := New(backend.URL)
+	p, err := New(backend.URL, 30*time.Second)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -48,7 +49,7 @@ func TestProxyForwardsRequest(t *testing.T) {
 }
 
 func TestProxyReturnsJSONErrorOnUnreachableUpstream(t *testing.T) {
-	p, err := New("http://127.0.0.1:1")
+	p, err := New("http://127.0.0.1:1", 30*time.Second)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

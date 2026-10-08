@@ -16,14 +16,14 @@ type Upstream struct {
 }
 
 // GetHealth pings each upstream's /healthz and reports an aggregate status.
-func GetHealth(upstreams []Upstream) http.HandlerFunc {
+func GetHealth(upstreams []Upstream, timeout time.Duration) http.HandlerFunc {
 	type healthResponse struct {
 		Status    string           `json:"status"`
 		Upstreams map[string]bool  `json:"upstreams"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
 		type result struct {
