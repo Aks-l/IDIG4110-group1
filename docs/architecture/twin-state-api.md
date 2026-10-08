@@ -2,9 +2,11 @@
 
 twin-core keeps `twin_state`, the latest known value per entity, and serves it to the frontend. This document defines how state gets in, how it is stored, how the frontend reads it, and how the structural model (homes, areas, devices, entities) is managed.
 
-## Inbound: normalized readings over HTTP
+## Inbound: readings from the event bus
 
-Ingest-service, the owner of the readings, delivers each reading as it is received:
+twin-core consumes `twin.readings` (consumer group `twin-core`), so `twin_state` follows the readings stream as ingest-service publishes it ([decision 0001](../decisions/0001-kafka-event-bus.md)). The shared consumer logs handler errors and skips the record, and a brand new consumer group starts at the newest records; see [rules-engine.md, Delivery semantics](rules-engine.md#delivery-semantics) for the stream semantics.
+
+`POST /api/v1/readings` remains available for manual pushes and tests, applying one reading through the same path:
 
 ```
 POST /api/v1/readings
@@ -240,4 +242,4 @@ Helpers that twin-core needed first live in `src/shared` so every service reuses
 - `shared/json-utils.Optional[T]`: PATCH absent/null/value semantics for partial updates.
 - `shared/validate`: go-playground/validator wired for the shared types; request structs carry `validate` tags, and `validate.Struct` reports the first failure.
 - `shared/pgerrors`: PostgreSQL error-code classification (unique, foreign key, not null, check, too long) for mapping onto service sentinels.
-- `shared/httpclient`: JSON-over-HTTP client speaking the `{"code","message"}` error contract; `IsRetryable` separates transient failures (5xx, rate limit, transport) from permanent 4xx rejections. ingest-service should use it to deliver readings to `POST /api/v1/readings`.
+- `shared/httpclient`: JSON-over-HTTP client speaking the `{"code","message"}` error contract; `IsRetryable` separates transient failures (5xx, rate limit, transport) from permanent 4xx rejections. Intended for service-to-service REST, for example the API gateway proxying to twin-core; readings themselves flow over Kafka (see Inbound above).

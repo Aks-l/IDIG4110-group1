@@ -19,7 +19,7 @@ gateway ─MQTT─▶ ingest-service ─Kafka twin.readings─▶ rules-engine
 
 | Topic | Producer | Consumer | Key | Payload |
 |---|---|---|---|---|
-| `twin.readings` | ingest-service | rules-engine (group `rules-engine`) | `{gateway_id}/{external_entity_id}` | normalized reading, [mqtt-envelope.md](mqtt-envelope.md) |
+| `twin.readings` | ingest-service | rules-engine (group `rules-engine`), twin-core (group `twin-core`) | `{gateway_id}/{external_entity_id}` | normalized reading, [mqtt-envelope.md](mqtt-envelope.md) |
 | `twin.commands` | rules-engine | ingest-service (group `ingest-service-commands`) | `{gateway_id}/{external_entity_id}` | command, [gateway-api.md](gateway-api.md) |
 | `twin.incidents` | rules-engine | notification service and UI (planned) | `home_id` | `IncidentEvent` in `src/shared/dto` |
 

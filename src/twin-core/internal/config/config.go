@@ -11,6 +11,14 @@ type Config struct {
 	Server    ServerConfig    `yaml:"server"`
 	Database  DatabaseConfig  `yaml:"database"`
 	Migration MigrationConfig `yaml:"migration"`
+	Kafka     KafkaConfig    `yaml:"kafka"`
+}
+
+// KafkaConfig connects twin-core to the event bus. With no brokers,
+// twin_state only changes through POST /api/v1/readings.
+type KafkaConfig struct {
+	Brokers string `yaml:"brokers"`
+	Group   string `yaml:"group"`
 }
 
 type ServerConfig struct {

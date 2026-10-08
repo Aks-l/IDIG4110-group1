@@ -15,3 +15,7 @@ database:
 
 migration:
   directory: "migrations"
+
+kafka:
+  brokers: "kafka:29092"
+  group: "twin-core"

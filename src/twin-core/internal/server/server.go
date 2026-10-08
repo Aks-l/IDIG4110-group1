@@ -12,8 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"IDIG4110/shared/kafka"
 	"IDIG4110/shared/migrate"
 	"IDIG4110/twin-core/internal/config"
+	"IDIG4110/twin-core/internal/consumer"
 	"IDIG4110/twin-core/internal/db"
 	"IDIG4110/twin-core/internal/repository"
 	"IDIG4110/twin-core/internal/service"
@@ -56,6 +58,29 @@ func Run() error {
 	stateQuerySvc := service.NewImplStateQuerySvc(stateRepo)
 	structureSvc := service.NewImplStructureSvc(stateRepo)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Keep twin_state in sync with the readings stream on the event bus
+	// (docs/decisions/0001-kafka-event-bus.md). The shared consumer logs
+	// and skips handler errors: liveness over completeness.
+	if brokers := kafka.ParseBrokers(cfg.Kafka.Brokers); len(brokers) > 0 {
+		readingsConsumer, err := kafka.NewConsumer(brokers, cfg.Kafka.Group, kafka.TopicReadings)
+		if err != nil {
+			return err
+		}
+		defer readingsConsumer.Close()
+		go func() {
+			slog.Info("Consuming readings", "topic", kafka.TopicReadings, "group", cfg.Kafka.Group)
+			if err := readingsConsumer.Run(ctx, consumer.NewReadings(twinStateSvc).Handle); err != nil && !errors.Is(err, context.Canceled) {
+				slog.Error("Readings stream stopped", "error", err)
+				stop()
+			}
+		}()
+	} else {
+		slog.Warn("No kafka brokers configured, twin_state only changes through POST /api/v1/readings")
+	}
+
 	router := NewRouter(stateQuerySvc, twinStateSvc, structureSvc)
 
 	httpServer := http.Server{
@@ -73,21 +98,17 @@ func Run() error {
 		serverError <- httpServer.ListenAndServe()
 	}()
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-serverError:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("listen: %w", err)
 		}
-		return nil
-	case <-shutdown:
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+	case <-ctx.Done():
 		slog.Info("Closing server")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-		if err := httpServer.Shutdown(ctx); err != nil {
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			return err
 		}
 	}
