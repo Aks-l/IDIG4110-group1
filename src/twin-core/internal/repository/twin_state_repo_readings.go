@@ -170,6 +170,12 @@ func (r *TwinStateRepoImpl) ensureDevice(ctx context.Context, tx pgx.Tx, reading
 	if _, err := tx.Exec(ctx, registerDeviceQuery, reading.GatewayID, reading.ExternalEntityID, domain.DefaultHomeID, deviceID); err != nil {
 		return "", fmt.Errorf("register device: %w", err)
 	}
+	// Bare-id API calls (PATCH/DELETE /devices/{id}) resolve their home
+	// through node_registry; without this row every auto-provisioned
+	// device 404s there, unlike explicitly created devices.
+	if _, err := tx.Exec(ctx, registerNodeQuery, deviceID, nodeKindDevice, domain.DefaultHomeID); err != nil {
+		return "", fmt.Errorf("register device node: %w", err)
+	}
 	return deviceID, nil
 }
 
