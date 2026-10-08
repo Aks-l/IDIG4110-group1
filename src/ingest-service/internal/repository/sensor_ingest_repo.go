@@ -24,22 +24,28 @@ const (
 		VALUES ($1, $2::uuid, $3, $4)
 	`
 	findReadingsByTimeRange = `
-		SELECT time, gateway_id, external_entity_id, event_id, device_class, value_num, value_text, unit
+		SELECT time, gateway_id, external_entity_id, event_id, device_class, value_num, value_text, unit, attributes
 		FROM ingest.readings
 		WHERE external_entity_id = $1
 			AND ($2::timestamptz IS NULL OR time >= $2::timestamptz)
 			AND ($3::timestamptz IS NULL OR time <= $3::timestamptz)
 		ORDER BY time ASC
+		LIMIT 10000
 	`
+	// Sensors are discovered from readings seen in the last 7 days; the
+	// window keeps the GROUP BY off the full hypertable history and matches
+	// the endpoint's "available sensors" meaning.
 	findSensorsQuery = `
-		SELECT event_id, external_entity_id, device_class, unit,
+		SELECT external_entity_id,
+			MAX(device_class) AS device_class,
+			MAX(unit) AS unit,
 			MAX(time) AS last_seen,
 			COUNT(*) AS reading_count
 		FROM ingest.readings
-		WHERE event_id IS NOT NULL
-			AND ($1::text IS NULL OR event_id::text = $1)
-		GROUP BY event_id, external_entity_id, device_class, unit
-		ORDER BY event_id
+		WHERE time >= now() - interval '7 days'
+			AND ($1::text IS NULL OR external_entity_id = $1)
+		GROUP BY external_entity_id
+		ORDER BY external_entity_id
 	`
 )
 
@@ -110,6 +116,7 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 
 	for rows.Next() {
 		var reading dto.Reading
+		var attributes []byte
 
 		if err := rows.Scan(
 			&reading.Timestamp,
@@ -120,8 +127,14 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 			&reading.ValueNum,
 			&reading.ValueText,
 			&reading.Unit,
+			&attributes,
 		); err != nil {
 			return nil, fmt.Errorf("scan reading: %w", err)
+		}
+		if attributes != nil {
+			if err := json.Unmarshal(attributes, &reading.Attributes); err != nil {
+				return nil, fmt.Errorf("unmarshal attributes: %w", err)
+			}
 		}
 
 		readings = append(readings, reading)
@@ -134,8 +147,8 @@ func (r *SensorIngestRepoImpl) FindByTimeRange(ctx context.Context, entityId str
 	return readings, nil
 }
 
-func (r *SensorIngestRepoImpl) FindSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
-	rows, err := r.db.Conn.Query(ctx, findSensorsQuery, sensorID)
+func (r *SensorIngestRepoImpl) FindSensors(ctx context.Context, entityID *string) ([]domain.Sensor, error) {
+	rows, err := r.db.Conn.Query(ctx, findSensorsQuery, entityID)
 	if err != nil {
 		return nil, fmt.Errorf("find sensors: %w", err)
 	}
@@ -147,7 +160,6 @@ func (r *SensorIngestRepoImpl) FindSensors(ctx context.Context, sensorID *string
 		var sensor domain.Sensor
 
 		if err := rows.Scan(
-			&sensor.SensorID,
 			&sensor.ExternalEntityID,
 			&sensor.DeviceClass,
 			&sensor.Unit,

@@ -54,8 +54,8 @@ func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, raw dto.RawMessage)
 	return s.repo.InsertRawMessage(ctx, raw)
 }
 
-func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {
-	data, err := s.repo.FindByTimeRange(ctx, entityId, from, to)
+func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityID string, from, to *time.Time) ([]dto.Reading, error) {
+	data, err := s.repo.FindByTimeRange(ctx, entityID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +63,8 @@ func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string
 	return data, nil
 }
 
-func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
-	sensors, err := s.repo.FindSensors(ctx, sensorID)
+func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, entityID *string) ([]domain.Sensor, error) {
+	sensors, err := s.repo.FindSensors(ctx, entityID)
 	if err != nil {
 		return nil, err
 	}
