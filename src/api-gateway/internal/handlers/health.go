@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"IDIG4110/shared/httperror"
 	jsonutils "IDIG4110/shared/json-utils"
 )
 
@@ -18,8 +18,8 @@ type Upstream struct {
 // GetHealth pings each upstream's /healthz and reports an aggregate status.
 func GetHealth(upstreams []Upstream, timeout time.Duration) http.HandlerFunc {
 	type healthResponse struct {
-		Status    string           `json:"status"`
-		Upstreams map[string]bool  `json:"upstreams"`
+		Status    string          `json:"status"`
+		Upstreams map[string]bool `json:"upstreams"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,7 @@ func GetHealth(upstreams []Upstream, timeout time.Duration) http.HandlerFunc {
 		}
 
 		if err := jsonutils.Encode(w, code, healthResponse{Status: status, Upstreams: statuses}); err != nil {
-			httperror.HandleError(w, http.StatusInternalServerError, err, httperror.ErrInternalServerError)
+			slog.Error("encoding health response", "error", err)
 		}
 	}
 }

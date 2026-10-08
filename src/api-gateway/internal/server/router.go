@@ -20,11 +20,12 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("upstream %s: %w", u.Name, err)
 		}
+		mux.Handle(u.Prefix, p)
 		mux.Handle(u.Prefix+"/", p)
 		healthUpstreams = append(healthUpstreams, handlers.Upstream{Name: u.Name, Url: u.Url})
 	}
 
 	mux.HandleFunc("GET "+HEALTHZ, handlers.GetHealth(healthUpstreams, time.Duration(cfg.Health.Timeout)*time.Second))
 
-	return middleware.Chain(mux, middleware.Recovery(), middleware.CORS(), middleware.Logging()), nil
+	return middleware.Chain(mux, middleware.Logging(), middleware.CORS(), middleware.Recovery()), nil
 }

@@ -45,8 +45,11 @@ Use both, each where it fits:
 **Positive**
 
 - **Events are kept and can be replayed.** A service that was down catches up
-  from its saved position, and a new service can rebuild its state, for example
-  `twin_state`, from history. This supports FR-DI-03, RQ1 and RQ4.
+  from its saved consumer group position. A brand new consumer group starts at
+  the newest records by default (`ConsumeResetOffset(AtEnd)` in
+  `src/shared/kafka`); rebuilding state from full history, for example a
+  rebuilt `twin_state`, means deliberately starting at the oldest offset.
+  This supports FR-DI-03, RQ1 and RQ4.
 - **Services scale on their own.** Consumer groups split partitions between
   copies, so we don't need MQTT shared subscriptions on the service side.
 - **The edge is decoupled from the core.** Adding a gateway type or protocol

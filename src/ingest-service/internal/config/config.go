@@ -18,10 +18,7 @@ type Config struct {
 // KafkaConfig connects ingest to the event bus. With no brokers, readings are
 // only stored and commands are not forwarded.
 type KafkaConfig struct {
-	Brokers string `yaml:"brokers"`
-	// GatewayID identifies the gateway readings arrive from until gateways
-	// are registered in ingest.gateways.
-	GatewayID     string `yaml:"gatewayId"`
+	Brokers       string `yaml:"brokers"`
 	CommandsGroup string `yaml:"commandsGroup"`
 }
 

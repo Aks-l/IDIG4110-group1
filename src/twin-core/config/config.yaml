@@ -1,0 +1,21 @@
+server:
+  port: 8080
+  readTimeout: 10
+  writeTimeout: 10
+  idleTimeout: 30
+  maxHeaderBytes: 1048576
+
+database:
+  host: "twin-db"
+  port: 5432
+  user: "twin"
+  name: "twin_db"
+  password: "twin"
+  ssl: "disable"
+
+migration:
+  directory: "migrations"
+
+kafka:
+  brokers: "kafka:29092"
+  group: "twin-core"

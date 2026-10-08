@@ -30,6 +30,12 @@ services:
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka_data_dev:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
 
   # One Postgres container per service.
 
@@ -106,7 +112,7 @@ services:
       context: .
       dockerfile: infra/dev/api-gateway.Dockerfile
     ports:
-      - "8084:8080"
+      - "8080:8080"
     volumes:
       - ./src/api-gateway:/app
       - ./src/shared:/shared
@@ -114,6 +120,8 @@ services:
       ingest-service:
         condition: service_started
       rules-engine:
+        condition: service_started
+      twin-core:
         condition: service_started
 
   ingest-service:
@@ -131,7 +139,7 @@ services:
       mosquitto:
         condition: service_started
       kafka:
-        condition: service_started
+        condition: service_healthy
 
   rules-engine:
     build:
@@ -152,7 +160,7 @@ services:
       rules-db:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
 
   device-simulator:
     build:
@@ -166,6 +174,30 @@ services:
     depends_on:
       - ingest-service
       - mosquitto
+
+  twin-core:
+    build:
+      context: .
+      dockerfile: infra/dev/twin-core.Dockerfile
+    ports:
+      - "8084:8080"
+    volumes:
+      - ./src/twin-core:/app
+      - ./src/shared:/shared
+    environment:
+      # Lets `docker compose exec twin-core go run ./cmd/migrate <cmd>`
+      # run without retyping the URL; the server itself reads config.yaml.
+      DB_URL: postgres://twin:twin@twin-db:5432/twin_db?sslmode=disable
+    depends_on:
+      twin-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   kafka_data_dev:

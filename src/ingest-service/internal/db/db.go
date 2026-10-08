@@ -14,7 +14,7 @@ import (
 
 type Database struct {
 	Conn *pgxpool.Pool
-	Url string
+	Url  string
 }
 
 func Init(cfg config.DatabaseConfig) (*Database, error) {

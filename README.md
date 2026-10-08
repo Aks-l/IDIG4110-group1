@@ -12,6 +12,18 @@ See [docs/architecture](docs/architecture) for the data model and messaging cont
 docker compose up
 ```
 
+### Migrations
+
+Migrations live in `src/<service>/migrations`; each service has its own `cmd/migrate`. Ingest uses `make migrate-up`; twin-core: `docker compose exec twin-core go run ./cmd/migrate up` (the compose service presets `DB_URL`).
+
+### Services
+
+| Service | Host port | Purpose |
+|---|---|---|
+| ingest-service | 8081 | Ingests gateway telemetry over MQTT into `ingest_db` |
+| device-simulator | 8082 | Publishes mock Home Assistant state_changed events for development |
+| twin-core | 8084 | Receives normalized readings from ingest over HTTP, tracks current state per entity (`twin_state`), and serves it to the frontend |
+
 ### Databases
 
 Database-per-service: each microservice owns its own Postgres container. All use the TimescaleDB image; the `timescaledb` extension is only enabled where needed.

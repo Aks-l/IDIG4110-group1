@@ -8,7 +8,9 @@ CREATE TABLE incidents (
     context         jsonb,
     triggered_at    timestamptz NOT NULL DEFAULT now(),
     acknowledged_at timestamptz,
-    resolved_at     timestamptz
+    resolved_at     timestamptz,
+    -- Crash replay dedup
+    CONSTRAINT incidents_rule_id_triggered_at_key UNIQUE (rule_id, triggered_at)
 );
 
 CREATE INDEX incidents_home_status_idx ON incidents (home_id, status);

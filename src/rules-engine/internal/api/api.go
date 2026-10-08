@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 
 	"IDIG4110/rules-engine/internal/rule"
 	"IDIG4110/rules-engine/internal/store"
@@ -30,9 +31,26 @@ func New(s *store.Store, reload func(context.Context) error) *API {
 	return &API{store: s, reload: reload}
 }
 
+// Reports whether API is ready
+//
+// # Inputs
+//
+// - w: [http.ResponseWriter] response writer
+// - r: [*http.Request] incoming request
+func (a *API) ready(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := a.store.Ping(ctx); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (a *API) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	mux.HandleFunc("GET /readyz", a.ready)
 
 	mux.HandleFunc("GET "+prefix+"/rules", a.listRules)
 	mux.HandleFunc("POST "+prefix+"/rules", a.createRule)

@@ -16,11 +16,11 @@ import (
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/ingest-service/internal/domain"
-	"IDIG4110/shared/kafka"
-	"IDIG4110/shared/migrate"
 	"IDIG4110/ingest-service/internal/mqttclient"
 	"IDIG4110/ingest-service/internal/repository"
 	"IDIG4110/ingest-service/internal/service"
+	"IDIG4110/shared/kafka"
+	"IDIG4110/shared/migrate"
 )
 
 func Run() error {
@@ -62,7 +62,7 @@ func Run() error {
 	}
 
 	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
-	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo, publisher, cfg.Kafka.GatewayID)
+	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo, publisher)
 
 	coll := mqttclient.NewCollector(
 		cfg.Mqtt.WorkerCount,
@@ -120,13 +120,10 @@ func Run() error {
 
 	select {
 	case err := <-serverError:
-		if err != nil {
-			return nil
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("listen %w", err)
 		}
-		if errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-		return fmt.Errorf("listen %w", err)
+		return nil
 	case <-shutdown:
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

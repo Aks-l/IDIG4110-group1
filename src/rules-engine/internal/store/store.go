@@ -42,6 +42,19 @@ func New(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
+// Ping checks that rules_db answers; used by the API readiness probe.
+//
+// # Inputs:
+//
+// - ctx: [context.Context] request context
+//
+// # Returns:
+//
+// - error: non-nil if the ping failed
+func (s *Store) Ping(ctx context.Context) error {
+	return s.pool.Ping(ctx)
+}
+
 // --- rules ----------------------------------------------------------------
 
 const ruleColumns = `id, home_id, name, coalesce(description, ''), enabled, priority,
@@ -191,8 +204,15 @@ func (s *Store) CreateIncident(ctx context.Context, inc Incident, channels []str
 	saved, err := scanIncident(tx.QueryRow(ctx,
 		`INSERT INTO incidents (rule_id, home_id, severity, message, context, triggered_at)
 		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (rule_id, triggered_at) DO NOTHING
 		 RETURNING `+incidentColumns,
 		inc.RuleID, inc.HomeID, inc.Severity, inc.Message, contextJSON, inc.TriggeredAt))
+	if errors.Is(err, ErrNotFound) {
+		// ON CONFLICT skipped the insert: the same rule already fired at this
+		// instant (crash replay). The deferred rollback discards the empty
+		// transaction; the caller treats this as a duplicate, not a failure.
+		return Incident{}, ErrConflict
+	}
 	if err != nil {
 		return inc, fmt.Errorf("inserting incident: %w", err)
 	}
