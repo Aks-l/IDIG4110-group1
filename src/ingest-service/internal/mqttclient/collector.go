@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
 
 	"IDIG4110/ingest-service/internal/domain"
 	"IDIG4110/shared/dto"
@@ -14,6 +15,7 @@ import (
 type Collector struct {
 	workers []chan dto.SensorStateEvent
 	svc     domain.SensorIngestSvc
+	wg      sync.WaitGroup
 }
 
 func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Collector {
@@ -47,10 +49,17 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 
 func (c *Collector) StartWorkers() {
 	for i, ch := range c.workers {
+		c.wg.Add(1)
+
 		go func(entityID int, queue chan dto.SensorStateEvent) {
+			defer c.wg.Done()
+
 			for state := range queue {
 				if err := c.svc.Create(context.Background(), state); err != nil {
-					slog.Error("Failed to create sensor object", "error", err)
+					slog.Error(
+						"Failed to create sensor object",
+						"entityId", state.EntityID,
+						"error", err)
 				}
 			}
 		}(i, ch)
