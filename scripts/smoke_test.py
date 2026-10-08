@@ -16,7 +16,7 @@ import time
 import urllib.error
 import urllib.request
 
-API = "http://localhost:8083"
+API = "http://localhost:8084"
 GATEWAY = "11111111-1111-1111-1111-111111111111"
 ENTITY = f"sensor.smoke_{int(time.time())}"
 
