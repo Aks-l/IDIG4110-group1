@@ -8,7 +8,10 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-const disconnectTime = 250 // in millis
+const (
+	disconnectTime = 250 // milliseconds
+	publishTimeout = 10 * time.Second
+)
 
 type Broker struct {
 	client mqtt.Client 
@@ -45,8 +48,14 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 }
 
 func (b *Broker) Publish(topic string, qos byte, payload []byte) {
-	token := b.client.Publish(topic,qos, false, payload)
-	token.Wait()
+	token := b.client.Publish(topic, qos, false, payload)
+	if !token.WaitTimeout(publishTimeout) {
+		slog.Error("Publish timed out", "topic", topic)
+		return
+	}
+	if err := token.Error(); err != nil {
+		slog.Error("Publish failed", "topic", topic, "error", err)
+	}
 }
 
 func (b *Broker) Close() {
