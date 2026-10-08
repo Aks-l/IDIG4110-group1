@@ -10,6 +10,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-mock}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+      PLACEHOLDER_API_TARGET: ${PLACEHOLDER_API_TARGET:-}
     ports:
       - "3000:3000" 
     restart: unless-stopped

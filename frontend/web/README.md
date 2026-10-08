@@ -11,12 +11,20 @@ docker compose up --build
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The default Compose setup
-uses mock data. To connect to a backend, create a `.env` file in this directory:
+uses mock data. The app also ships placeholder API routes (`src/app/api`) that
+serve the frontend contract with fixture data, so `NEXT_PUBLIC_DATA_SOURCE=api`
+works without a backend:
 
 ```env
 NEXT_PUBLIC_DATA_SOURCE=api
-NEXT_PUBLIC_API_URL=http://host.docker.internal:8080/api
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
 ```
+
+To connect a real backend, either point the browser at it directly
+(`NEXT_PUBLIC_API_URL=http://<backend>/api`), or keep the browser on the
+placeholder routes and set `PLACEHOLDER_API_TARGET=http://<backend>/api` — the
+placeholder routes then forward every request there. Either way no code changes
+are needed. See `docs/frontend/api.md` for the full contract.
 
 Then rebuild the image:
 
