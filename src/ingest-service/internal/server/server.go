@@ -37,8 +37,12 @@ func Run() error {
 	}
 	m.Migrate.Up()
 
+	if err := m.Migrate.Up(); err != nil {
+		return fmt.Errorf("migration running: %w", err)
+	}
+
 	if err := m.CheckMigrationStatus(); err != nil {
-		return err
+		return fmt.Errorf("migration status check failed: %w", err)
 	}
 
 	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
