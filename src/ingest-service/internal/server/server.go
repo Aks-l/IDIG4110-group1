@@ -91,13 +91,13 @@ func Run() error {
 
 	select {
 	case err := <-serverError:
-		if err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		if errors.Is(err, http.ErrServerClosed) {
-			return err
+		if err != nil {
+			return fmt.Errorf("listen %w", err)
 		}
-		return fmt.Errorf("listen %w", err)
+		return nil
 	case <-shutdown:
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
