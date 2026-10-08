@@ -1,6 +1,7 @@
 'use client';
 
 import { Toggle } from '@/components/Toggle';
+import { formatMetricValue } from '@/lib/format';
 import type { Device, RoomData } from '@/lib/api/types';
 
 type SidePanelProps = {
@@ -39,10 +40,10 @@ export function SidePanel({ device, room, rooms, onToggleDevice }: SidePanelProp
         <div className="mt-6">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#68766d]">Room snapshot</p>
           <div className="grid grid-cols-2 gap-2">
-            <Metric label="Temperature" value={`${room.metrics.temperature.value}°C`} />
-            <Metric label="Humidity" value={`${room.metrics.humidity.value}%`} />
-            <Metric label="CO₂" value={`${room.metrics.co2.value} ppm`} />
-            <Metric label="Occupancy" value={String(room.metrics.occupancy.value)} />
+            <Metric label="Temperature" value={formatMetricValue(room.metrics.temperature, '°C')} />
+            <Metric label="Humidity" value={formatMetricValue(room.metrics.humidity, '%')} />
+            <Metric label="CO₂" value={formatMetricValue(room.metrics.co2, ' ppm')} />
+            <Metric label="Occupancy" value={formatMetricValue(room.metrics.occupancy)} />
           </div>
         </div>
         <div className="mt-6">

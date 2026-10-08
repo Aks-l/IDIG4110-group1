@@ -2,6 +2,7 @@ import type {
   AutomationAction,
   AutomationCondition,
   DayOfWeek,
+  RoomMetric,
 } from '@/lib/api/types';
 
 /**
@@ -62,4 +63,27 @@ export function describeAction(a: AutomationAction): string {
     case 'delay':
       return `Wait ${a.minutes} min`;
   }
+}
+
+// --- room metrics ----------------------------------------------------------
+
+/**
+ * Display value for a room metric with its unit, or an em dash when there is
+ * no reading: the room has no sensor for the metric, or none has arrived yet.
+ */
+export function formatMetricValue(metric: RoomMetric, unit = ''): string {
+  return metric.value === null ? '—' : `${metric.value}${unit}`;
+}
+
+/**
+ * Signed change since the previous reading, for an InfoBox change line.
+ * undefined when there is no previous reading to compare against, which
+ * hides the change line.
+ */
+export function formatMetricChange(
+  metric: RoomMetric,
+  unit = '',
+): string | undefined {
+  if (metric.change === null) return undefined;
+  return `${metric.change >= 0 ? '+' : ''}${metric.change}${unit}`;
 }

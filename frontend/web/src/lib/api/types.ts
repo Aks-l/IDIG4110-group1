@@ -86,9 +86,12 @@ export type EnergyPageData = {
   byRoom: RoomEnergy[];
 };
 
+// A metric reading and its change since the previous one. null when the room
+// has no sensor for the metric or no reading has arrived yet, so the UI can
+// show missing data instead of a misleading 0.
 export type RoomMetric = {
-  value: number;
-  change: number;
+  value: number | null;
+  change: number | null;
 };
 
 export type RoomMetrics = {

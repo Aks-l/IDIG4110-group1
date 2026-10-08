@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { RoomView, SubNav } from '@/components/SubNav';
 import { InfoBox } from '@/components/InfoBox';
 import { loadRoom, loadRooms } from '@/lib/api/rooms.data';
-import { formatTime } from '@/lib/format';
+import { formatMetricChange, formatMetricValue, formatTime } from '@/lib/format';
 import type { RoomData } from '@/lib/api/types';
 
 
@@ -114,23 +114,27 @@ export default function RoomsPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <InfoBox
               label="Temperature"
-              value={`${data.metrics.temperature.value}°C`}
-              change={`${data.metrics.temperature.change >= 0 ? '+' : ''}${data.metrics.temperature.change}°C`}
+              value={formatMetricValue(data.metrics.temperature, '°C')}
+              change={formatMetricChange(data.metrics.temperature, '°C')}
             />
             <InfoBox
               label="Humidity"
-              value={`${data.metrics.humidity.value}%`}
-              change={`${data.metrics.humidity.change >= 0 ? '+' : ''}${data.metrics.humidity.change}%`}
+              value={formatMetricValue(data.metrics.humidity, '%')}
+              change={formatMetricChange(data.metrics.humidity, '%')}
             />
             <InfoBox
               label="CO₂"
-              value={`${data.metrics.co2.value} ppm`}
-              change={`${data.metrics.co2.change >= 0 ? '+' : ''}${data.metrics.co2.change} ppm`}
+              value={formatMetricValue(data.metrics.co2, ' ppm')}
+              change={formatMetricChange(data.metrics.co2, ' ppm')}
             />
             <InfoBox
               label="Occupancy"
-              value={`${data.metrics.occupancy.value} ${data.metrics.occupancy.value === 1 ? 'person' : 'people'}`}
-              change={`${data.metrics.occupancy.change >= 0 ? '+' : ''}${data.metrics.occupancy.change}`}
+              value={
+                data.metrics.occupancy.value === null
+                  ? '—'
+                  : `${data.metrics.occupancy.value} ${data.metrics.occupancy.value === 1 ? 'person' : 'people'}`
+              }
+              change={formatMetricChange(data.metrics.occupancy)}
             />
           </div>
 

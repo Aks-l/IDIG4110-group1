@@ -197,25 +197,29 @@ function matchesMetric(entity: TwinEntityState, classes: string[]): boolean {
 /**
  * Room metrics from the area's entities: the current value of the first
  * sensor matching each metric, plus the delta against its previous reading.
- * Metrics without a sensor read 0 until the backend reports them.
+ * Metrics without a sensor — or without a reading yet — stay null, and the
+ * UI shows them as missing data instead of a misleading 0.
  */
 function roomMetrics(entities: TwinEntityState[]): RoomMetrics {
   const metrics: RoomMetrics = {
-    temperature: { value: 0, change: 0 },
-    humidity: { value: 0, change: 0 },
-    co2: { value: 0, change: 0 },
-    occupancy: { value: 0, change: 0 },
+    temperature: { value: null, change: null },
+    humidity: { value: null, change: null },
+    co2: { value: null, change: null },
+    occupancy: { value: null, change: null },
   };
   for (const key of Object.keys(metrics) as (keyof RoomMetrics)[]) {
-    const entity = entities.find((candidate) =>
-      matchesMetric(candidate, METRIC_CLASSES[key]),
+    // The first matching sensor that has a reading; matches without one are
+    // skipped so a silent sensor does not mask a working one.
+    const entity = entities.find(
+      (candidate) =>
+        matchesMetric(candidate, METRIC_CLASSES[key]) &&
+        stateValue(candidate.state) !== undefined,
     );
     const value = entity ? stateValue(entity?.state) : undefined;
     if (value === undefined) continue;
     metrics[key].value = value;
-    metrics[key].change = round2(
-      value - (stateValue(entity?.previous) ?? value),
-    );
+    const previous = stateValue(entity?.previous);
+    metrics[key].change = previous === undefined ? null : round2(value - previous);
   }
   return metrics;
 }
