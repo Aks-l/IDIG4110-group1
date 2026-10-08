@@ -43,7 +43,8 @@ frontend/web/src/lib/api/
 ├── overview.data.ts      Overview data-source adapter
 ├── energy.data.ts        Energy data-source adapter
 ├── placeholder-handler.ts  Placeholder route plumbing: fixtures or proxy
-└── placeholder-store.ts    In-memory state behind the placeholder routes
+├── placeholder-store.ts    In-memory state behind the placeholder routes
+└── backend.ts              Hybrid mode: gateway calls and Rule/Incident mapping
 
 frontend/web/src/app/api/
 └── Placeholder route handlers, one folder per endpoint (rooms, devices,
@@ -73,7 +74,9 @@ client-side use. Restart the Next.js development server after changing variables
 `PLACEHOLDER_API_TARGET` is a server-side variable for the placeholder routes
 (see below): when set, they forward every request to that base URL instead of
 serving fixtures. It is read at request time, so it can change without a
-rebuild.
+rebuild. The hybrid variables `PLACEHOLDER_BACKEND_URL` and
+`PLACEHOLDER_BACKEND_PATHS` (also server-side, also read at request time) are
+described in the next section.
 
 ## Shared Client
 
@@ -122,7 +125,64 @@ the api-gateway exposes `/api/v1/ingest/*`, `/api/v1/rules*` and
 `/api/v1/incidents*` on host port `8084` (see
 `src/api-gateway/config/config.yaml`), which do not overlap with this
 contract; aligning them is part of the backend work tracked in the checklist
-below.
+below. (Gateway quirk: the bare collection paths `/api/v1/rules` and
+`/api/v1/incidents` are misrouted — the gateway answers with a 307 redirect
+to the trailing-slash path, which the rules-engine then 404s; see the note
+in the hybrid section.)
+
+### Hybrid: backend-backed paths
+
+The paths the backend already implements can be served from it while the rest
+keep serving fixtures — hybrid mode. Set two server-side variables:
+
+```env
+PLACEHOLDER_BACKEND_URL=http://localhost:8083
+PLACEHOLDER_BACKEND_PATHS=/automations,/events
+```
+
+`PLACEHOLDER_BACKEND_URL` is the backend base URL — the rules-engine directly
+(host port `8083` in the development compose setup) until the api-gateway
+serves the collection paths: the gateway registers each upstream as a
+subtree pattern (`mux.Handle(u.Prefix+"/", p)` in
+`src/api-gateway/internal/server/router.go`), so `/api/v1/rules` answers with
+a 307 redirect to `/api/v1/rules/`, which the rules-engine then 404s. The
+per-id endpoints (`PATCH /automations/:id`) are unaffected; registering the
+bare prefix too fixes the rest. When a path is listed in
+`PLACEHOLDER_BACKEND_PATHS`, its placeholder route fetches from the backend,
+translates the response onto the frontend contract, and serves that; backend
+errors surface as-is, there is no silent fallback to fixtures. Unlisted paths
+are unaffected, and backend-backed paths take precedence over
+`PLACEHOLDER_API_TARGET` forwarding.
+
+| Placeholder path | Gateway path | Translation |
+| --- | --- | --- |
+| `GET /automations` | `GET /api/v1/rules` | `Rule` → `Automation` |
+| `POST /automations` | `POST /api/v1/rules` | draft → rule input, see below |
+| `PATCH /automations/:id` | `PATCH /api/v1/rules/{id}` | `{enabled}` passes through, `Rule` → `Automation` |
+| `GET /events` | `GET /api/v1/incidents` | `Incident` → `Event` |
+| `GET /events/:id` | `GET /api/v1/incidents` | found in the newest incidents (the list caps at 100) |
+
+The mapping lives in `src/lib/api/backend.ts` and is lossy where the models
+differ:
+
+- `fire_count` and `last_fired_at` become `runCount` and `lastRun`. The
+  category is derived from the actions: rules that raise incidents are
+  `Security`, notify-only rules are `Notification`, the rest `Comfort`.
+- Backend matches render as the closest condition kind: numeric matches as
+  temperature comparisons, presence sensors as presence, other binary
+  matches as motion in the entity's location (for example smoke).
+- Creating an automation needs a rule trigger, so the first mappable
+  condition becomes the trigger and the rest become conditions. Time and day
+  conditions, delay actions and multiple notify actions cannot be expressed
+  by the rules backend and are rejected with a `422` and a message instead of
+  being silently dropped.
+- The frontend has no home concept, so rules are created in
+  `PLACEHOLDER_BACKEND_HOME_ID` (default `00000000-0000-0000-0000-000000000001`,
+  the seeded demo home). Temperature conditions use the entity in
+  `PLACEHOLDER_BACKEND_TEMPERATURE_ENTITY` (default: the first simulated
+  sensor). Device actions become `domain.entity` ids with the domain guessed
+  from the device name; motion conditions become
+  `binary_sensor.<location>_motion`.
 
 ## Endpoint Modules
 

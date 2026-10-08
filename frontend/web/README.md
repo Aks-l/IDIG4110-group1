@@ -26,6 +26,13 @@ placeholder routes and set `PLACEHOLDER_API_TARGET=http://<backend>/api` — the
 placeholder routes then forward every request there. Either way no code changes
 are needed. See `docs/frontend/api.md` for the full contract.
 
+The endpoints the backend already implements can also be served from it while
+the rest stay on fixtures (hybrid mode): set
+`PLACEHOLDER_BACKEND_URL=http://localhost:8084` and
+`PLACEHOLDER_BACKEND_PATHS=/automations,/events`, and `/automations` plus
+`/events` are fetched from the api-gateway and translated onto the frontend
+contract. `docs/frontend/api.md` documents the per-endpoint details.
+
 Then rebuild the image:
 
 ```bash
