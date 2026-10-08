@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
 import { Toggle } from '@/components/Toggle';
+import { DeviceDetailModal } from '@/components/DeviceDetailModal';
 import { loadDevices, setDeviceState } from '@/lib/api/devices.data';
 import { loadRooms } from '@/lib/api/rooms.data';
-import type { Device, RoomData } from '@/lib/api/types';
+import type { Device } from '@/lib/api/types';
 
 type DeviceWithRoom = Device & { room: string; warning: boolean };
 type FilterValue = 'All' | string;
@@ -30,6 +31,7 @@ export default function DevicePage() {
   const [status, setStatus] = useState<FilterValue>('All');
   const [room, setRoom] = useState<FilterValue>('All');
   const [error, setError] = useState<string | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([loadDevices(), loadRooms()])
@@ -48,6 +50,10 @@ export default function DevicePage() {
   const rooms = useMemo(() => [...new Set(devices.map((device) => device.room))].sort(), [devices]);
   const onlineCount = devices.filter((device) => device.on).length;
   const warningCount = devices.filter((device) => device.warning).length;
+
+  const selectedDevice = selectedDeviceId
+    ? devices.find((d) => d.id === selectedDeviceId) ?? null
+    : null;
 
   const handleToggle = async (deviceId: string, on: boolean) => {
     const previous = devices.find((device) => device.id === deviceId)?.on;
@@ -85,14 +91,14 @@ export default function DevicePage() {
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1f6f5b]">Connected home</p>
         <h1 className="page-heading mt-2 text-3xl font-bold text-[#17221d] sm:text-4xl">Devices</h1>
-        <p className="mt-2 text-sm text-[#68766d]">Keep track of every connected device across your home.</p>
+        <p className="mt-2 text-sm text-[#68766d]">Keep track of connected devices.</p>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <InfoBox label="Total" value={String(devices.length)} />
-        <InfoBox label="Online" value={String(onlineCount)} change="Live" />
+        <InfoBox label="Online" value={String(onlineCount)}/>
         <InfoBox label="Offline" value={String(devices.length - onlineCount)} />
-        <InfoBox label="Warnings" value={String(warningCount)} change={warningCount ? 'Review' : 'Clear'} />
+        <InfoBox label="Warnings" value={String(warningCount)} />
       </section>
 
       <section className="panel p-4 sm:p-5">
@@ -128,7 +134,11 @@ export default function DevicePage() {
         {filteredDevices.length > 0 ? (
           <ul>
             {filteredDevices.map((device) => (
-              <li key={device.id} className="flex items-center gap-3 border-b border-[#e6ece7] px-5 py-4 last:border-b-0 hover:bg-[#f8faf8] sm:gap-4">
+              <li
+                key={device.id}
+                onClick={() => setSelectedDeviceId(device.id)}
+                className="flex cursor-pointer items-center gap-3 border-b border-[#e6ece7] px-5 py-4 last:border-b-0 hover:bg-[#f8faf8] sm:gap-4"
+              >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e5f2e9] text-lg text-[#1f6f5b]" aria-hidden="true">
                   {deviceIcons[device.type] ?? '•'}
                 </span>
@@ -139,11 +149,13 @@ export default function DevicePage() {
                 <span className={`hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex ${device.warning ? 'bg-[#fff4d9] text-[#956b13]' : device.on ? 'bg-[#e5f2e9] text-[#1f6f5b]' : 'bg-[#eef1ee] text-[#68766d]'}`}>
                   {device.warning ? 'Warning' : device.on ? 'On' : 'Off'}
                 </span>
-                <Toggle
-                  checked={device.on}
-                  onChange={(on) => handleToggle(device.id, on)}
-                  label={`${device.on ? 'Turn off' : 'Turn on'} ${device.name}`}
-                />
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Toggle
+                    checked={device.on}
+                    onChange={(on) => handleToggle(device.id, on)}
+                    label={`${device.on ? 'Turn off' : 'Turn on'} ${device.name}`}
+                  />
+                </span>
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${device.warning ? 'bg-[#e5a93d]' : device.on ? 'bg-[#39a56f] shadow-[0_0_0_4px_#dff1e6]' : 'bg-[#a8b4ab]'}`} title={device.warning ? 'Warning' : device.on ? 'Online' : 'Offline'} />
               </li>
             ))}
@@ -155,6 +167,12 @@ export default function DevicePage() {
           </div>
         )}
       </section>
+
+      <DeviceDetailModal
+        device={selectedDevice}
+        onClose={() => setSelectedDeviceId(null)}
+        onToggle={handleToggle}
+      />
     </div>
   );
 }
