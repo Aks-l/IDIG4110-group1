@@ -12,8 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"IDIG4110/ingest-service/internal/commands"
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
+	"IDIG4110/ingest-service/internal/domain"
+	"IDIG4110/shared/kafka"
 	"IDIG4110/shared/migrate"
 	"IDIG4110/ingest-service/internal/mqttclient"
 	"IDIG4110/ingest-service/internal/repository"
@@ -41,8 +44,25 @@ func Run() error {
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var publisher domain.ReadingPublisher
+	var producer *kafka.Producer
+	brokers := kafka.ParseBrokers(cfg.Kafka.Brokers)
+	if len(brokers) > 0 {
+		producer, err = kafka.NewProducer(brokers)
+		if err != nil {
+			return err
+		}
+		defer producer.Close()
+		publisher = readingPublisher{producer}
+	} else {
+		slog.Warn("No Kafka brokers configured: readings are stored but not published")
+	}
+
 	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
-	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo)
+	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo, publisher, cfg.Kafka.GatewayID)
 
 	coll := mqttclient.NewCollector(
 		cfg.Mqtt.WorkerCount,
@@ -64,7 +84,20 @@ func Run() error {
 		return err
 	}
 
-	router := NewRouter()
+	if len(brokers) > 0 {
+		consumer, err := kafka.NewConsumer(brokers, cfg.Kafka.CommandsGroup, kafka.TopicCommands)
+		if err != nil {
+			return err
+		}
+		defer consumer.Close()
+		go func() {
+			if err := consumer.Run(ctx, commands.NewForwarder(client).Handle); err != nil && !errors.Is(err, context.Canceled) {
+				slog.Error("Command forwarding stopped", "error", err)
+			}
+		}()
+	}
+
+	router := NewRouter(sensorIngestSvc)
 
 	httpServer := http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

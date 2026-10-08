@@ -2,26 +2,73 @@ package service
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
+	"time"
 
 	"IDIG4110/ingest-service/internal/domain"
 	"IDIG4110/shared/dto"
 )
 
+const publishTimeout = 5 * time.Second
+
 type SensorIngestSvcImpl struct {
-	repo domain.SensorIngestRepo
+	repo      domain.SensorIngestRepo
+	publisher domain.ReadingPublisher
+	gatewayID string
 }
 
-func NewImplSensorIngestSvc(repo domain.SensorIngestRepo) *SensorIngestSvcImpl {
+// NewImplSensorIngestSvc stores events through repo and, when publisher is
+// not nil, publishes them as normalized readings from gatewayID.
+func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.ReadingPublisher, gatewayID string) *SensorIngestSvcImpl {
 	return &SensorIngestSvcImpl{
-		repo: repo,
+		repo:      repo,
+		publisher: publisher,
+		gatewayID: gatewayID,
 	}
 }
 
-func (s *SensorIngestSvcImpl) Create(ctx context.Context, payload dto.SensorStateEvent) error {
-	if err := s.repo.Insert(ctx, payload); err != nil {
+func (s *SensorIngestSvcImpl) Create(ctx context.Context, raw dto.RawMessage) error {
+	reading, err := Normalize(raw)
+	if err != nil {
 		return err
 	}
-	slog.Info("successfully added sensor data")
+	if (reading.ValueNum == nil) == (reading.ValueText == nil) {
+		return fmt.Errorf("reading must have exactly one of value_num or value_text")
+	}
+	if err := s.repo.InsertReading(ctx, reading); err != nil {
+		return err
+	}
+
+	if s.publisher == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+
+	defer cancel()
+	if err := s.publisher.PublishReading(ctx, reading); err != nil {
+		return fmt.Errorf("publishing reading: %w", err)
+	}
 	return nil
+}
+
+func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, raw dto.RawMessage) error {
+	return s.repo.InsertRawMessage(ctx, raw)
+}
+
+func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {
+	data, err := s.repo.FindByTimeRange(ctx, entityId, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
+	sensors, err := s.repo.FindSensors(ctx, sensorID)
+	if err != nil {
+		return nil, err
+	}
+
+	return sensors, nil
 }

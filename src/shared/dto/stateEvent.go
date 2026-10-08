@@ -2,7 +2,8 @@ package dto
 
 import "time"
 
-type SensorStateEvent struct {
+// StateEvent is the device-native event carried in a RawMessage payload.
+type StateEvent struct {
 	EventType string    `json:"event_type"`
 	TimeFired time.Time `json:"time_fired"`
 	EntityID  string    `json:"entity_id"`
