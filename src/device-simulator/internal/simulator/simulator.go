@@ -47,7 +47,7 @@ func (s *Simulator) run(id string) {
 		slog.Info(
 			"generated temperature",
 			"deviceID", id,
-			"temperature", temperature,
+			"temperature", fmt.Sprintf("%.1f", temperature),
 			"unit", "°C",
 		)
 

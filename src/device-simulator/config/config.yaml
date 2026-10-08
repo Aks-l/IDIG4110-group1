@@ -9,6 +9,6 @@ mqtt:
   cleanSession: false
   topic: "sensors"
   interval: 10
-  deviceCount: 2
+  deviceCount: 1
   gatewayId: "00000000-0000-0000-0000-000000000001"
   
