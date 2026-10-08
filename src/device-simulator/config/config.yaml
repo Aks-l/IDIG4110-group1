@@ -10,4 +10,5 @@ mqtt:
   topic: "sensors"
   interval: 10
   deviceCount: 2
+  gatewayId: "00000000-0000-0000-0000-000000000001"
   

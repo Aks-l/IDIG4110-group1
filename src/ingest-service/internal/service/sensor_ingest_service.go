@@ -3,9 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"strconv"
-	"strings"
 	"time"
 
 	"IDIG4110/ingest-service/internal/domain"
@@ -30,53 +27,48 @@ func NewImplSensorIngestSvc(repo domain.SensorIngestRepo, publisher domain.Readi
 	}
 }
 
-func (s *SensorIngestSvcImpl) Create(ctx context.Context, payload dto.SensorStateEvent) error {
-	if err := s.repo.Insert(ctx, payload); err != nil {
+func (s *SensorIngestSvcImpl) Create(ctx context.Context, raw dto.RawMessage) error {
+	reading, err := Normalize(raw)
+	if err != nil {
 		return err
 	}
-	slog.Info("successfully added sensor data")
+	if (reading.ValueNum == nil) == (reading.ValueText == nil) {
+		return fmt.Errorf("reading must have exactly one of value_num or value_text")
+	}
+	if err := s.repo.InsertReading(ctx, reading); err != nil {
+		return err
+	}
 
 	if s.publisher == nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+
 	defer cancel()
-	if err := s.publisher.PublishReading(ctx, ToReading(s.gatewayID, payload)); err != nil {
+	if err := s.publisher.PublishReading(ctx, reading); err != nil {
 		return fmt.Errorf("publishing reading: %w", err)
 	}
 	return nil
 }
 
-// ToReading converts a Home Assistant style state event into the normalized
-// reading model (docs/architecture/mqtt-envelope.md). Numeric states become
-// value_num, everything else value_text.
-func ToReading(gatewayID string, ev dto.SensorStateEvent) dto.Reading {
-	r := dto.Reading{
-		GatewayID:        gatewayID,
-		ExternalEntityID: ev.EntityID,
-		Timestamp:        ev.TimeFired,
+func (s *SensorIngestSvcImpl) CreateRaw(ctx context.Context, raw dto.RawMessage) error {
+	return s.repo.InsertRawMessage(ctx, raw)
+}
+
+func (s *SensorIngestSvcImpl) GetSensorData(ctx context.Context, entityId string, from, to *time.Time) ([]dto.Reading, error) {
+	data, err := s.repo.FindByTimeRange(ctx, entityId, from, to)
+	if err != nil {
+		return nil, err
 	}
 
-	state := strings.TrimSpace(ev.NewState.State)
-	if f, err := strconv.ParseFloat(state, 64); err == nil {
-		r.ValueNum = &f
-	} else {
-		r.ValueText = &state
+	return data, nil
+}
+
+func (s *SensorIngestSvcImpl) GetSensors(ctx context.Context, sensorID *string) ([]domain.Sensor, error) {
+	sensors, err := s.repo.FindSensors(ctx, sensorID)
+	if err != nil {
+		return nil, err
 	}
 
-	attributes := map[string]any{}
-	for k, v := range ev.NewState.Attributes {
-		switch k {
-		case "device_class":
-			r.DeviceClass = &v
-		case "unit_of_measurement":
-			r.Unit = &v
-		default:
-			attributes[k] = v
-		}
-	}
-	if len(attributes) > 0 {
-		r.Attributes = attributes
-	}
-	return r
+	return sensors, nil
 }
