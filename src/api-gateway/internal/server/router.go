@@ -27,5 +27,5 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 
 	mux.HandleFunc("GET "+HEALTHZ, handlers.GetHealth(healthUpstreams, time.Duration(cfg.Health.Timeout)*time.Second))
 
-	return middleware.Chain(mux, middleware.Recovery(), middleware.CORS(), middleware.Logging()), nil
+	return middleware.Chain(mux, middleware.Logging(), middleware.CORS(), middleware.Recovery()), nil
 }
