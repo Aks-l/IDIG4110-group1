@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { InfoBox } from '@/components/InfoBox';
 import { Toggle } from '@/components/Toggle';
 import { DeviceDetailModal } from '@/components/DeviceDetailModal';
+import { isWarningDevice } from '@/lib/api/device-status';
 import { loadDevices, setDeviceState } from '@/lib/api/devices.data';
 import { loadRooms } from '@/lib/api/rooms.data';
 import type { Device } from '@/lib/api/types';
@@ -19,10 +20,6 @@ const deviceIcons: Record<string, string> = {
   Media: '▶',
   Sensor: '◈',
 };
-
-function isWarningDevice(device: Device) {
-  return device.type === 'Sensor' && /smoke|leak/i.test(device.name);
-}
 
 export default function DevicePage() {
   const [devices, setDevices] = useState<DeviceWithRoom[]>([]);

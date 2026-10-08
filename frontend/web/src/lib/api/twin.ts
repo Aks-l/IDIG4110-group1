@@ -1,6 +1,8 @@
 import { fetchBaseJson } from './backend';
+import { isWarningDevice } from './device-status';
 import type {
   Device,
+  OverviewData,
   RoomData,
   RoomLayout,
   RoomMetrics,
@@ -15,7 +17,7 @@ import type {
  * Enabled with two environment variables (read at request time):
  *
  *   PLACEHOLDER_TWIN_URL=http://localhost:8084
- *   PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms
+ *   PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms,/overview
  *
  * Everything reads one dashboard view, GET /api/v1/homes/{home_id}/state:
  * areas and devices with their entities and current state. The home is
@@ -320,6 +322,67 @@ export function twinHomeStateToDevice(
 ): Device | null {
   const device = state.devices.find((candidate) => candidate.id === deviceId);
   return device ? twinDeviceToDevice(device) : null;
+}
+
+/**
+ * Overview data from the home state. The stats are home-level aggregates of
+ * the room metrics — temperature and humidity average the rooms that have a
+ * reading, air quality comes from the worst CO₂, occupancy is the total —
+ * and stats without any reading are omitted, like the rooms' missing data.
+ * `connected` is the twin device count and `warning` uses the devices page's
+ * smoke/leak heuristic so the two pages agree. `events` is 0: twin-core
+ * keeps no event history, only current and previous state.
+ */
+export function twinHomeStateToOverview(state: TwinHomeState): OverviewData {
+  const rooms = twinHomeStateToRooms(state);
+  const stats: OverviewData['stats'] = [];
+
+  const metricValues = (key: keyof RoomMetrics) =>
+    rooms
+      .map((room) => room.metrics[key].value)
+      .filter((value): value is number => value !== null);
+
+  const average = (values: number[]): number =>
+    round2(values.reduce((sum, value) => sum + value, 0) / values.length);
+
+  const temperatures = metricValues('temperature');
+  const humidities = metricValues('humidity');
+  const co2s = metricValues('co2');
+  const occupancies = metricValues('occupancy');
+
+  if (temperatures.length > 0) {
+    stats.push({ label: 'Temperature', value: `${average(temperatures)}°C` });
+  }
+  if (humidities.length > 0) {
+    stats.push({ label: 'Humidity', value: `${average(humidities)}%` });
+  }
+  if (co2s.length > 0) {
+    stats.push({ label: 'Air Quality', value: airQuality(Math.max(...co2s)) });
+  }
+  if (occupancies.length > 0) {
+    const total = occupancies.reduce((sum, value) => sum + value, 0);
+    stats.push({
+      label: 'Occupancy',
+      value: `${total} ${total === 1 ? 'person' : 'people'}`,
+    });
+  }
+
+  const devices = twinHomeStateToDevices(state);
+  return {
+    stats,
+    devices: {
+      connected: devices.length,
+      warning: devices.filter(isWarningDevice).length,
+      events: 0,
+    },
+  };
+}
+
+/** Rough air-quality label from the home's worst CO₂ reading (ppm). */
+function airQuality(worstCo2: number): string {
+  if (worstCo2 < 800) return 'Good';
+  if (worstCo2 < 1200) return 'Moderate';
+  return 'Poor';
 }
 
 function asTriple(value: unknown): [number, number, number] | null {

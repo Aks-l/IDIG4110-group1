@@ -198,7 +198,7 @@ the placeholder paths it can back, again config-only:
 
 ```env
 PLACEHOLDER_TWIN_URL=http://localhost:8084
-PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms
+PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms,/overview
 ```
 
 Everything reads one dashboard view, `GET /api/v1/homes/{home_id}/state`:
@@ -218,6 +218,7 @@ the rules hybrid are enabled by default: `npm run dev` reads them from
 | `GET /rooms`, `GET /rooms/:id` | `GET /api/v1/homes/{home_id}/state` | areas → `RoomData` |
 | `GET /devices`, `GET /devices/:id` | `GET /api/v1/homes/{home_id}/state` | devices + entities → `Device` |
 | `GET /3d/rooms` | `GET /api/v1/homes/{home_id}/state` | area geometry → `RoomLayout` |
+| `GET /overview` | `GET /api/v1/homes/{home_id}/state` | home aggregate → `OverviewData` |
 
 The mapping lives in `src/lib/api/twin.ts` and is honest about what
 twin-core lacks:
@@ -226,9 +227,16 @@ twin-core lacks:
   name: temperature, humidity, carbon dioxide/co2, occupancy/presence); the
   change is the delta against the entity's previous reading. Values and
   changes are rounded to two decimals — the raw subtraction carries
-  floating point noise. Metrics without
-  a sensor read 0, and room activity is always empty — twin-core keeps current
-  and previous state only, no history.
+  floating point noise. Metrics without a sensor — or without a reading
+  yet — are null and render as no data, and room activity is always empty —
+  twin-core keeps current and previous state only, no history.
+- `GET /overview` aggregates the home: temperature and humidity are averages
+  over the rooms with a reading, air quality comes from the worst CO₂,
+  occupancy is the total, and stats without data are omitted entirely.
+  `connected` is the twin device count, so it matches the devices page, and
+  `warning` reuses the devices page's smoke/leak heuristic
+  (`src/lib/api/device-status.ts`); `events` is 0, since twin-core keeps no
+  event history.
 - Device toggles (`PATCH /devices/:id`) are rejected with `501`: twin-core
   has no command endpoint, and `POST /api/v1/readings` is the ingest path, not
   a device command.
