@@ -37,9 +37,7 @@ func Run() error {
 	if err != nil {
 		return err
 	}
-	m.Migrate.Up()
-
-	if err := m.Migrate.Up(); err != nil {
+	if err := m.Up(); err != nil {
 		return fmt.Errorf("migration running: %w", err)
 	}
 
