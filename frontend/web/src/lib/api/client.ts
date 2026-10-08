@@ -31,10 +31,7 @@ export async function apiClient<T>(
 	}
 
 	if (!response.ok) {
-		throw new ApiError(
-			`API request failed with status ${response.status}`,
-			response.status,
-		);
+		throw new ApiError(await errorMessage(response), response.status);
 	}
 
 	if (response.status === 204) {
@@ -42,4 +39,20 @@ export async function apiClient<T>(
 	}
 
 	return response.json() as Promise<T>;
+}
+
+/**
+ * Reads the { code, message } body the API returns on error responses,
+ * falling back to a generic message when there is no JSON body.
+ */
+async function errorMessage(response: Response): Promise<string> {
+	try {
+		const body = (await response.json()) as { message?: unknown };
+		if (typeof body?.message === 'string' && body.message.trim() !== '') {
+			return body.message;
+		}
+	} catch {
+		// not JSON; keep the generic message
+	}
+	return `API request failed with status ${response.status}`;
 }

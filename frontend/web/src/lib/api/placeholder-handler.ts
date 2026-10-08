@@ -72,7 +72,9 @@ export function jsonOk(data: unknown, status = 200): Response {
 }
 
 export function jsonError(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
+  // Same shape the Go services return, so clients can always read
+  // { code, message } from an error response.
+  return new Response(JSON.stringify({ code: status, message }), {
     status,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
