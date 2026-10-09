@@ -3,6 +3,7 @@ import { isWarningDevice } from './device-status';
 import type {
   Device,
   OverviewData,
+  RoomConnection,
   RoomData,
   RoomLayout,
   RoomMetrics,
@@ -67,6 +68,20 @@ export async function loadTwinHomeState(): Promise<TwinHomeState | null> {
   const homeId = await resolveTwinHomeId();
   if (homeId === null) return null;
   return fetchBaseJson<TwinHomeState>(twinUrl(), `${TWIN_HOMES_PATH}/${homeId}/state`);
+}
+
+/**
+ * The home's graph edges (GET /api/v1/homes/{home_id}/relations), for the
+ * same home the state view loads. The 3D layout composes the area-to-area
+ * connects_to edges with the room geometry.
+ */
+export async function loadTwinRelations(): Promise<TwinRelation[]> {
+  const homeId = await resolveTwinHomeId();
+  if (homeId === null) return [];
+  return fetchBaseJson<TwinRelation[]>(
+    twinUrl(),
+    `${TWIN_HOMES_PATH}/${homeId}/relations`,
+  );
 }
 
 // --- twin-core response shapes ----------------------------------------------
@@ -141,6 +156,19 @@ export type TwinHomeState = {
   home: TwinHome;
   areas: TwinAreaState[];
   devices: TwinDeviceState[];
+};
+
+/** One graph edge between two nodes (areas carry the room adjacency). */
+export type TwinRelation = {
+  id: string;
+  home_id?: string | null;
+  from_kind: string;
+  from_id: string;
+  to_kind: string;
+  to_id: string;
+  relation_type: string;
+  bidirectional?: boolean | null;
+  label?: string | null;
 };
 
 // --- twin -> frontend mapping ------------------------------------------------
@@ -399,16 +427,134 @@ function asTriple(value: unknown): [number, number, number] | null {
 /**
  * Room layouts from the areas' geometry when it carries position and size
  * ({ position: [x, y, z], size: [w, h, d] }); otherwise a deterministic
- * grid so the 3D scene has something to place.
+ * grid so the 3D scene has something to place. Geometry y is the floor
+ * level (the seed keeps its single-storey rooms at 0), while the scene
+ * places boxes by their center on the ground plane, so the mapping lifts
+ * y by half the height.
  */
 export function twinHomeStateToRoomLayouts(state: TwinHomeState): RoomLayout[] {
-  return state.areas.map((area, index) => ({
-    roomId: area.id,
-    position: asTriple(area.geometry?.position) ?? [
-      (index % 2) * 5,
-      0,
-      Math.floor(index / 2) * 5,
-    ],
-    size: asTriple(area.geometry?.size) ?? [3.5, 2.6, 3.5],
-  }));
+  return state.areas.map((area, index) => {
+    const floor: [number, number, number] = asTriple(
+      area.geometry?.position,
+    ) ?? [(index % 2) * 5, 0, Math.floor(index / 2) * 5];
+    const size: [number, number, number] = asTriple(area.geometry?.size) ?? [
+      3.5,
+      2.6,
+      3.5,
+    ];
+    return {
+      roomId: area.id,
+      position: [floor[0], floor[1] + size[1] / 2, floor[2]],
+      size,
+    };
+  });
+}
+
+/** Passage height and floor offset, matching the mock passage blocks. */
+const CONNECTION_HEIGHT = 0.6;
+const CONNECTION_Y = 0.3;
+/** The bridge slightly overlaps both rooms so no hairline gap remains. */
+const CONNECTION_OVERLAP = 0.1;
+
+/** Opening width per relation label; other labels open the full shared span. */
+const OPENING_WIDTHS: Record<string, number> = {
+  doorway: 1.2,
+  archway: 2.2,
+};
+
+/** Interval a room covers on one horizontal axis of its layout triple. */
+function axisSpan(layout: RoomLayout, axis: 0 | 2): [number, number] {
+  return [
+    layout.position[axis] - layout.size[axis] / 2,
+    layout.position[axis] + layout.size[axis] / 2,
+  ];
+}
+
+/** Distance between two rooms on one horizontal axis; >= 0 when apart. */
+function axisGap(from: RoomLayout, to: RoomLayout, axis: 0 | 2): number {
+  const [fromMin, fromMax] = axisSpan(from, axis);
+  const [toMin, toMax] = axisSpan(to, axis);
+  return Math.max(fromMin - toMax, toMin - fromMax);
+}
+
+/**
+ * Box for the passage between two rooms: it bridges the gap on the axis
+ * the rooms face each other on, and opens the shared wall on the other,
+ * sized by the relation label. Null when the rooms share no wall (apart
+ * on both horizontal axes, or overlapping volumes).
+ */
+function passageBox(
+  from: RoomLayout,
+  to: RoomLayout,
+  label: string | undefined,
+): Pick<RoomConnection, 'position' | 'size'> | null {
+  const gapX = axisGap(from, to, 0);
+  const gapZ = axisGap(from, to, 2);
+
+  let facing: 0 | 2;
+  if (gapX >= 0 && gapZ >= 0) facing = gapX <= gapZ ? 0 : 2;
+  else if (gapX >= 0) facing = 0;
+  else if (gapZ >= 0) facing = 2;
+  else return null;
+  const across: 0 | 2 = facing === 0 ? 2 : 0;
+
+  // Gap between the near faces on the facing axis.
+  const gapStart = Math.min(axisSpan(from, facing)[1], axisSpan(to, facing)[1]);
+  const gapEnd = Math.max(axisSpan(from, facing)[0], axisSpan(to, facing)[0]);
+  // Shared wall interval on the across axis.
+  const acrossStart = Math.max(
+    axisSpan(from, across)[0],
+    axisSpan(to, across)[0],
+  );
+  const acrossEnd = Math.min(
+    axisSpan(from, across)[1],
+    axisSpan(to, across)[1],
+  );
+  if (acrossEnd <= acrossStart) return null;
+
+  const opening =
+    OPENING_WIDTHS[label?.toLowerCase() ?? ''] ?? Number.POSITIVE_INFINITY;
+
+  const position: [number, number, number] = [0, CONNECTION_Y, 0];
+  const size: [number, number, number] = [0, CONNECTION_HEIGHT, 0];
+  position[facing] = (gapStart + gapEnd) / 2;
+  size[facing] = Math.max(gapEnd - gapStart + CONNECTION_OVERLAP, 0.3);
+  position[across] = (acrossStart + acrossEnd) / 2;
+  size[across] = Math.min(acrossEnd - acrossStart, opening);
+  return { position, size };
+}
+
+/**
+ * Passages for the 3D scene from the room layouts and the home's relations:
+ * every area-to-area `connects_to` edge becomes a floor-level box bridging
+ * the two rooms (doorway, archway, open plan), which is how the seed models
+ * the demo home's room adjacency.
+ */
+export function twinConnections(
+  layouts: RoomLayout[],
+  relations: TwinRelation[],
+): RoomConnection[] {
+  const layoutById = new Map(layouts.map((layout) => [layout.roomId, layout]));
+  const connections: RoomConnection[] = [];
+  for (const relation of relations) {
+    if (
+      relation.relation_type !== 'connects_to' ||
+      relation.from_kind !== 'area' ||
+      relation.to_kind !== 'area'
+    ) {
+      continue;
+    }
+    const from = layoutById.get(relation.from_id);
+    const to = layoutById.get(relation.to_id);
+    if (!from || !to) continue;
+    const box = passageBox(from, to, relation.label ?? undefined);
+    if (!box) continue;
+    connections.push({
+      fromRoomId: from.roomId,
+      toRoomId: to.roomId,
+      label: relation.label ?? undefined,
+      ...box,
+    });
+  }
+  return connections;
 }

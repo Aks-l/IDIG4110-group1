@@ -87,7 +87,7 @@ func (s *Simulator) publish(reading Reading) error {
 	event := dto.StateEvent{
 		EventType: "state_changed",
 		TimeFired: reading.Time,
-		EntityID:  reading.DeviceID + "." + reading.Property,
+		EntityID:  reading.EntityID,
 		NewState:  dto.NewState{State: reading.State, Attributes: attributes},
 	}
 	payload, err := json.Marshal(event)

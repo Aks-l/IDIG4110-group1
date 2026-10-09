@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
-import type { Device, RoomData, RoomLayout } from '@/lib/api/types';
+import type { Device, RoomConnection, RoomData, RoomLayout } from '@/lib/api/types';
 import { DeviceHotspot } from './DeviceHotspot';
 
 type HouseModelProps = {
   rooms: RoomData[];
   roomLayout: RoomLayout[];
+  connections: RoomConnection[];
   devices: Device[];
   selectedRoomId: string | null;
   selectedDeviceId: string | null;
@@ -18,35 +19,39 @@ type HouseModelProps = {
 const roomColors = ['#a8cdb8', '#c9d8bb', '#b6cad0', '#d8c7a7'];
 const USE_REAL_MODEL = false;
 
-const connections = [
-  { position: [0.075, 0.3, 1.75] as [number, number, number], size: [1.37, 0.6, 0.85] as [number, number, number] },
-  { position: [-2.85, 0.3, -0.325] as [number, number, number], size: [1.05, 0.6, 0.87] as [number, number, number] },
-  { position: [3.2, 0.3, -0.3] as [number, number, number], size: [0.95, 0.6, 1.42] as [number, number, number] },
-];
-
 function RealHouseModel() {
   const { scene } = useGLTF('/models/house.glb');
   return <primitive object={scene} />;
 }
 
-export function HouseModel({ rooms, roomLayout, devices, selectedRoomId, selectedDeviceId, onSelectRoom, onSelectDevice }: HouseModelProps) {
+export function HouseModel({ rooms, roomLayout, connections, devices, selectedRoomId, selectedDeviceId, onSelectRoom, onSelectDevice }: HouseModelProps) {
   const roomMap = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms]);
   const layoutMap = useMemo(() => new Map(roomLayout.map((layout) => [layout.roomId, layout])), [roomLayout]);
 
   // TODO: Replace this block-out with useGLTF('/models/house.glb') when the real model is available.
   const getDevicePosition = (device: Device, index: number): [number, number, number] => {
-    const layout = device.roomId ? layoutMap.get(device.roomId) : undefined;
     if (device.position) return device.position;
-    const center = layout?.position ?? [0, 0.9, 0];
-    return [center[0] + ((index % 3) - 1) * 0.8, 0.9, center[2] + (index % 2) * 0.65 - 0.3];
+    const layout = device.roomId ? layoutMap.get(device.roomId) : undefined;
+    if (!layout) return [((index % 3) - 1) * 0.8, 0.9, (index % 2) * 0.65 - 0.3];
+    // Hotspots float just above the room box so they stay visible over solid
+    // room volumes (0.3 above the mock slabs keeps the old 0.9).
+    const top = layout.position[1] + layout.size[1] / 2;
+    return [
+      layout.position[0] + ((index % 3) - 1) * 0.8,
+      top + 0.3,
+      layout.position[2] + (index % 2) * 0.65 - 0.3,
+    ];
   };
 
   return (
     <group>
       {USE_REAL_MODEL && <RealHouseModel />}
       <group>
-        {connections.map((connection, index) => (
-          <mesh key={`connection-${index}`} position={connection.position}>
+        {connections.map((connection) => (
+          <mesh
+            key={`connection-${connection.fromRoomId}-${connection.toRoomId}`}
+            position={connection.position}
+          >
             <boxGeometry args={connection.size} />
             <meshStandardMaterial color="#d8e5da" />
           </mesh>

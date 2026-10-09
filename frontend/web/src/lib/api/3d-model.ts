@@ -1,6 +1,6 @@
 import { apiClient } from './client';
-import type { RoomLayout } from './types';
+import type { ThreeDRoomsData } from './types';
 
-export function getRoomLayout() {
-  return apiClient<RoomLayout[]>('/3d/rooms');
+export function getThreeDRooms() {
+  return apiClient<ThreeDRoomsData>('/3d/rooms');
 }

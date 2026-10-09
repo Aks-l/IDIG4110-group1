@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"go.yaml.in/yaml/v4"
 )
@@ -49,6 +50,10 @@ type Device struct {
 	Type         string           `json:"type"`
 	InitialState map[string]any   `json:"initial_state"`
 	Simulation   SimulationConfig `json:"simulation"`
+	// Entities maps a state property to the external entity id its
+	// readings publish as; unmapped properties publish as
+	// "{device_id}.{property}".
+	Entities map[string]string `json:"entities"`
 }
 
 type SimulationConfig struct {
@@ -57,6 +62,7 @@ type SimulationConfig struct {
 	Humidity          NumericRange `json:"humidity"`
 	MotionProbability *float64     `json:"motion_probability"`
 	OpenProbability   *float64     `json:"open_probability"`
+	StateProbability  *float64     `json:"state_probability"`
 	Power             NumericRange `json:"power"`
 	EnergyPerTick     *float64     `json:"energy_per_tick"`
 	TemperatureStep   *float64     `json:"temperature_step"`
@@ -111,6 +117,7 @@ func (c HouseConfig) Validate() error {
 		return fmt.Errorf("house id, name and gateway_id are required")
 	}
 	seen := map[string]bool{}
+	seenEntities := map[string]bool{}
 	for _, room := range c.House.Rooms {
 		if room.ID == "" || room.Name == "" {
 			return fmt.Errorf("room id and name are required")
@@ -121,6 +128,15 @@ func (c HouseConfig) Validate() error {
 			}
 			if seen[device.ID] {
 				return fmt.Errorf("duplicate device id %q", device.ID)
+			}
+			for property, entityID := range device.Entities {
+				if strings.TrimSpace(entityID) == "" {
+					return fmt.Errorf("device %q maps property %q to an empty entity id", device.ID, property)
+				}
+				if seenEntities[entityID] {
+					return fmt.Errorf("duplicate entity id %q", entityID)
+				}
+				seenEntities[entityID] = true
 			}
 			if err := device.Simulation.Validate(device.ID); err != nil {
 				return err
@@ -144,6 +160,7 @@ func (s SimulationConfig) Validate(deviceID string) error {
 	for name, value := range map[string]*float64{
 		"motion_probability": s.MotionProbability,
 		"open_probability":   s.OpenProbability,
+		"state_probability":  s.StateProbability,
 	} {
 		if value != nil && (*value < 0 || *value > 1) {
 			return fmt.Errorf("%s.%s must be between 0 and 1", deviceID, name)

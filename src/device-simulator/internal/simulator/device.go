@@ -3,6 +3,7 @@ package simulator
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 type Reading struct {
 	DeviceID   string
 	Property   string
+	EntityID   string
 	State      string
 	Attributes map[string]string
 	Time       time.Time
@@ -32,6 +34,7 @@ type Device interface {
 	State() map[string]any
 	Simulate(time.Time) []Reading
 	ApplyCommand(dto.Command) error
+	Addresses(externalEntityID string) bool
 }
 
 type genericDevice struct {
@@ -40,6 +43,7 @@ type genericDevice struct {
 	state       map[string]any
 	lastReading map[string]string
 	simulation  config.SimulationConfig
+	entities    map[string]string
 }
 
 var capabilitiesByType = map[string][]string{
@@ -53,6 +57,14 @@ var capabilitiesByType = map[string][]string{
 	"door_sensor":        {"read_open"},
 	"smart_plug":         {"turn_on", "turn_off", "read_power"},
 	"energy_sensor":      {"read_power", "read_energy"},
+	"climate_sensor":     {"read_temperature", "read_humidity"},
+	"air_quality_sensor": {"read_humidity", "read_co2"},
+	"light":              {"turn_on", "turn_off"},
+	"fan":                {"turn_on", "turn_off"},
+	"siren":              {"turn_on", "turn_off"},
+	"lock":               {"lock", "unlock"},
+	"valve":              {"open", "close"},
+	"binary_sensor":      {},
 }
 
 func NewDevice(roomID string, cfg config.Device) (Device, error) {
@@ -64,11 +76,16 @@ func NewDevice(roomID string, cfg config.Device) (Device, error) {
 	for key, value := range cfg.InitialState {
 		state[key] = value
 	}
+	entities := make(map[string]string, len(cfg.Entities))
+	for property, entityID := range cfg.Entities {
+		entities[property] = entityID
+	}
 	return &genericDevice{
 		info:        DeviceInfo{ID: cfg.ID, RoomID: roomID, Type: cfg.Type, Capabilities: append([]string(nil), capabilities...)},
 		state:       state,
 		lastReading: map[string]string{},
 		simulation:  cfg.Simulation,
+		entities:    entities,
 	}, nil
 }
 
@@ -101,6 +118,24 @@ func (d *genericDevice) Simulate(now time.Time) []Reading {
 	switch d.info.Type {
 	case "temperature_sensor":
 		d.state["temperature"] = d.nextTemperature(number(d.state["temperature"], 21))
+	case "climate_sensor":
+		d.state["temperature"] = d.nextTemperature(number(d.state["temperature"], 21))
+		humidity := d.simulationRange(d.simulation.Humidity, 20, 80, 1)
+		d.state["humidity"] = clamp(number(d.state["humidity"], 45)+(rand.Float64()*2-1)*humidity.change, humidity.min, humidity.max)
+	case "air_quality_sensor":
+		humidity := d.simulationRange(d.simulation.Humidity, 20, 80, 1)
+		d.state["humidity"] = clamp(number(d.state["humidity"], 45)+(rand.Float64()*2-1)*humidity.change, humidity.min, humidity.max)
+		d.state["co2"] = clamp(number(d.state["co2"], 600)+(rand.Float64()*2-1)*15, 400, 1200)
+	case "binary_sensor":
+		// Home Assistant style on/off text; state_probability is the
+		// chance of the active state each tick, so 0 keeps it quiet.
+		if key := firstStateKey(d.state); key != "" {
+			if rand.Float64() < pointerFloat(d.simulation.StateProbability, 0) {
+				d.state[key] = "on"
+			} else {
+				d.state[key] = "off"
+			}
+		}
 	case "humidity_sensor":
 		humidity := d.simulationRange(d.simulation.Humidity, 20, 80, 1)
 		d.state["humidity"] = clamp(number(d.state["humidity"], 45)+(rand.Float64()*2-1)*humidity.change, humidity.min, humidity.max)
@@ -166,6 +201,26 @@ func pointerFloat(value *float64, fallback float64) float64 {
 	return *value
 }
 
+// firstStateKey returns the lexically first state key, so single-property
+// devices behave deterministically despite Go map ordering.
+func firstStateKey(state map[string]any) string {
+	keys := make([]string, 0, len(state))
+	for key := range state {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	if len(keys) == 0 {
+		return ""
+	}
+	return keys[0]
+}
+
+// textPowerState reports whether a device type reports its power state as
+// Home Assistant style on/off text instead of a boolean.
+func textPowerState(deviceType string) bool {
+	return deviceType == "light" || deviceType == "fan" || deviceType == "siren"
+}
+
 func (d *genericDevice) readings(now time.Time) []Reading {
 	properties := map[string]struct {
 		deviceClass string
@@ -182,6 +237,10 @@ func (d *genericDevice) readings(now time.Time) []Reading {
 		"on":                  {"switch", ""},
 		"brightness":          {"brightness", "%"},
 		"mode":                {"mode", ""},
+		"smoke":               {"smoke", ""},
+		"leak":                {"moisture", ""},
+		"co2":                 {"carbon_dioxide", "ppm"},
+		"locked":              {"lock", ""},
 	}
 	var result []Reading
 	for property, metadata := range properties {
@@ -198,7 +257,11 @@ func (d *genericDevice) readings(now time.Time) []Reading {
 		if metadata.unit != "" {
 			attributes["unit_of_measurement"] = metadata.unit
 		}
-		result = append(result, Reading{DeviceID: d.info.ID, Property: property, State: state, Attributes: attributes, Time: now})
+		entityID := d.info.ID + "." + property
+		if id, ok := d.entities[property]; ok && id != "" {
+			entityID = id
+		}
+		result = append(result, Reading{DeviceID: d.info.ID, Property: property, EntityID: entityID, State: state, Attributes: attributes, Time: now})
 	}
 	return result
 }
@@ -206,7 +269,7 @@ func (d *genericDevice) readings(now time.Time) []Reading {
 func (d *genericDevice) ApplyCommand(command dto.Command) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.addresses(command.ExternalEntityID) {
+	if !d.Addresses(command.ExternalEntityID) {
 		return fmt.Errorf("command targets %q, device is %q", command.ExternalEntityID, d.info.ID)
 	}
 	switch command.Command {
@@ -214,7 +277,33 @@ func (d *genericDevice) ApplyCommand(command dto.Command) error {
 		if !hasCapability(d.info.Capabilities, command.Command) {
 			return fmt.Errorf("device %q does not support %s", d.info.ID, command.Command)
 		}
-		d.state["on"] = command.Command == "turn_on"
+		if textPowerState(d.info.Type) {
+			if command.Command == "turn_on" {
+				d.state["on"] = "on"
+			} else {
+				d.state["on"] = "off"
+			}
+		} else {
+			d.state["on"] = command.Command == "turn_on"
+		}
+	case "lock", "unlock":
+		if !hasCapability(d.info.Capabilities, command.Command) {
+			return fmt.Errorf("device %q does not support %s", d.info.ID, command.Command)
+		}
+		if command.Command == "lock" {
+			d.state["locked"] = "locked"
+		} else {
+			d.state["locked"] = "unlocked"
+		}
+	case "open", "close":
+		if !hasCapability(d.info.Capabilities, command.Command) {
+			return fmt.Errorf("device %q does not support %s", d.info.ID, command.Command)
+		}
+		if command.Command == "open" {
+			d.state["open"] = "open"
+		} else {
+			d.state["open"] = "closed"
+		}
 	case "set_brightness":
 		if !hasCapability(d.info.Capabilities, command.Command) {
 			return fmt.Errorf("device %q does not support set_brightness", d.info.ID)
@@ -252,9 +341,14 @@ func (d *genericDevice) ApplyCommand(command dto.Command) error {
 // device: the device id itself, an entity id of one of its properties
 // ("{device_id}.{property}", the form readings publish), or the legacy
 // state topic.
-func (d *genericDevice) addresses(externalEntityID string) bool {
+func (d *genericDevice) Addresses(externalEntityID string) bool {
 	if externalEntityID == d.info.ID || externalEntityID == d.topicID() {
 		return true
+	}
+	for _, entityID := range d.entities {
+		if externalEntityID == entityID {
+			return true
+		}
 	}
 	deviceID, _, found := strings.Cut(externalEntityID, ".")
 	return found && deviceID == d.info.ID

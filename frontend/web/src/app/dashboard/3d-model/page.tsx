@@ -5,10 +5,10 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { SidePanel } from '@/components/three/SidePanel';
 import { loadDevices } from '@/lib/api/devices.data';
-import { loadRoomLayout } from '@/lib/api/three-d.data';
+import { loadThreeDRooms } from '@/lib/api/three-d.data';
 import { loadRooms } from '@/lib/api/rooms.data';
 import { setDeviceState } from '@/lib/api/devices.data';
-import type { Device, RoomData, RoomLayout } from '@/lib/api/types';
+import type { Device, RoomConnection, RoomData, RoomLayout } from '@/lib/api/types';
 
 const Scene = dynamic(() => import('@/components/three/Scene'), {
   ssr: false,
@@ -19,14 +19,15 @@ export default function ThreeDModelPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [roomLayout, setRoomLayout] = useState<RoomLayout[]>([]);
+  const [connections, setConnections] = useState<RoomConnection[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([loadDevices(), loadRooms(), loadRoomLayout()])
-      .then(([loadedDevices, loadedRooms, loadedLayout]) => {
+    Promise.all([loadDevices(), loadRooms(), loadThreeDRooms()])
+      .then(([loadedDevices, loadedRooms, threeDRooms]) => {
         const roomByDevice = new Map<string, string>(
           loadedRooms.flatMap((room) => room.devices.map((device) => [`${room.id}-${device.id}`, room.id] as const)),
         );
@@ -35,7 +36,8 @@ export default function ThreeDModelPage() {
           roomId: device.roomId ?? roomByDevice.get(device.id),
         })));
         setRooms(loadedRooms);
-        setRoomLayout(loadedLayout);
+        setRoomLayout(threeDRooms.rooms);
+        setConnections(threeDRooms.connections);
       })
       .catch(() => setError('Unable to load the digital twin'))
       .finally(() => setLoading(false));
@@ -90,6 +92,7 @@ export default function ThreeDModelPage() {
                 devices={devices}
                 rooms={rooms}
                 roomLayout={roomLayout}
+                connections={connections}
                 selectedDeviceId={selectedDeviceId}
                 selectedRoomId={selectedRoomId}
                 onSelectDevice={handleSelectDevice}

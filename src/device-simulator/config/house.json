@@ -1,7 +1,7 @@
 {
   "house": {
-    "id": "house_1",
-    "name": "Smart Home",
+    "id": "demo_home",
+    "name": "Demo Home",
     "gateway_id": "00000000-0000-0000-0000-000000000001",
     "rooms": [
       {
@@ -9,61 +9,41 @@
         "name": "Living Room",
         "devices": [
           {
-            "id": "temperature_1",
+            "id": "00000000-0000-0000-0000-000000000001",
             "type": "temperature_sensor",
             "initial_state": { "temperature": 21.5 },
+            "entities": { "temperature": "00000000-0000-0000-0000-000000000001" },
             "simulation": {
               "enabled": true,
               "temperature": {
-                "min": 18.0,
-                "max": 26.0,
-                "max_change": 0.3
+                "min": 19.0,
+                "max": 23.0,
+                "max_change": 0.2
               }
             }
           },
           {
-            "id": "humidity_1",
-            "type": "humidity_sensor",
-            "initial_state": { "humidity": 45.0 },
+            "id": "multi.living_room",
+            "type": "air_quality_sensor",
+            "initial_state": { "humidity": 45.0, "co2": 620.0 },
+            "entities": {
+              "humidity": "humidity.living_room",
+              "co2": "co2.living_room"
+            },
             "simulation": {
               "enabled": true,
               "humidity": {
-                "min": 30.0,
-                "max": 70.0,
-                "max_change": 2.0
+                "min": 35.0,
+                "max": 55.0,
+                "max_change": 1.0
               }
             }
           },
           {
-            "id": "light_1",
-            "type": "smart_light",
-            "initial_state": { "on": false, "brightness": 80 }
-          },
-          {
-            "id": "ac_1",
-            "type": "air_conditioner",
-            "initial_state": {
-              "on": true,
-              "current_temperature": 24.0,
-              "target_temperature": 21.0,
-              "mode": "cool"
-            },
-            "simulation": {
-              "enabled": true,
-              "temperature_step": 0.5
-            }
-          },
-          {
-            "id": "thermostat_1",
-            "type": "thermostat",
-            "initial_state": {
-              "current_temperature": 20.0,
-              "target_temperature": 21.0
-            },
-            "simulation": {
-              "enabled": true,
-              "temperature_step": 0.2
-            }
+            "id": "light.living_room",
+            "type": "light",
+            "initial_state": { "on": "on" },
+            "entities": { "on": "light.living_room" }
           }
         ]
       },
@@ -72,47 +52,34 @@
         "name": "Kitchen",
         "devices": [
           {
-            "id": "oven_1",
-            "type": "smart_oven",
-            "initial_state": {
-              "on": false,
-              "current_temperature": 22.0,
-              "target_temperature": 180.0,
-              "mode": "conventional"
-            },
+            "id": "00000000-0000-0000-0000-000000000002",
+            "type": "temperature_sensor",
+            "initial_state": { "temperature": 20.0 },
+            "entities": { "temperature": "00000000-0000-0000-0000-000000000002" },
             "simulation": {
               "enabled": true,
-              "temperature_step": 2.0
-            }
-          },
-          {
-            "id": "plug_1",
-            "type": "smart_plug",
-            "initial_state": { "on": false, "power": 0.0 },
-            "simulation": {
-              "enabled": true,
-              "power": {
-                "min": 60.0,
-                "max": 80.0
+              "temperature": {
+                "min": 18.0,
+                "max": 24.0,
+                "max_change": 0.2
               }
             }
           },
           {
-            "id": "energy_1",
-            "type": "energy_sensor",
-            "initial_state": {
-              "power": 120.0,
-              "energy": 0.0
-            },
+            "id": "binary_sensor.kitchen_smoke",
+            "type": "binary_sensor",
+            "initial_state": { "smoke": "off" },
+            "entities": { "smoke": "binary_sensor.kitchen_smoke" },
             "simulation": {
               "enabled": true,
-              "power": {
-                "min": 80.0,
-                "max": 180.0,
-                "max_change": 10.0
-              },
-              "energy_per_tick": 0.002
+              "state_probability": 0.0
             }
+          },
+          {
+            "id": "light.kitchen",
+            "type": "light",
+            "initial_state": { "on": "off" },
+            "entities": { "on": "light.kitchen" }
           }
         ]
       },
@@ -121,21 +88,107 @@
         "name": "Hallway",
         "devices": [
           {
-            "id": "motion_1",
-            "type": "motion_sensor",
-            "initial_state": { "motion": false },
+            "id": "lock.front_door",
+            "type": "lock",
+            "initial_state": { "locked": "locked" },
+            "entities": { "locked": "lock.front_door" }
+          },
+          {
+            "id": "lock.back_door",
+            "type": "lock",
+            "initial_state": { "locked": "locked" },
+            "entities": { "locked": "lock.back_door" }
+          },
+          {
+            "id": "siren.alarm",
+            "type": "siren",
+            "initial_state": { "on": "off" },
+            "entities": { "on": "siren.alarm" }
+          },
+          {
+            "id": "binary_sensor.hallway_motion",
+            "type": "binary_sensor",
+            "initial_state": { "motion": "off" },
+            "entities": { "motion": "binary_sensor.hallway_motion" },
             "simulation": {
               "enabled": true,
-              "motion_probability": 0.15
+              "state_probability": 0.2
+            }
+          }
+        ]
+      },
+      {
+        "id": "bedroom",
+        "name": "Bedroom",
+        "devices": [
+          {
+            "id": "sensor.bedroom_climate",
+            "type": "climate_sensor",
+            "initial_state": { "temperature": 20.0, "humidity": 41.0 },
+            "entities": {
+              "temperature": "temperature.bedroom",
+              "humidity": "humidity.bedroom"
+            },
+            "simulation": {
+              "enabled": true,
+              "temperature": {
+                "min": 18.5,
+                "max": 22.0,
+                "max_change": 0.2
+              },
+              "humidity": {
+                "min": 35.0,
+                "max": 50.0,
+                "max_change": 1.0
+              }
             }
           },
           {
-            "id": "door_1",
-            "type": "door_sensor",
-            "initial_state": { "open": false },
+            "id": "light.bedroom",
+            "type": "light",
+            "initial_state": { "on": "off" },
+            "entities": { "on": "light.bedroom" }
+          },
+          {
+            "id": "fan.bedroom",
+            "type": "fan",
+            "initial_state": { "on": "off" },
+            "entities": { "on": "fan.bedroom" }
+          }
+        ]
+      },
+      {
+        "id": "bathroom",
+        "name": "Bathroom",
+        "devices": [
+          {
+            "id": "valve.main_water",
+            "type": "valve",
+            "initial_state": { "open": "open" },
+            "entities": { "open": "valve.main_water" }
+          },
+          {
+            "id": "binary_sensor.bathroom_leak",
+            "type": "binary_sensor",
+            "initial_state": { "leak": "off" },
+            "entities": { "leak": "binary_sensor.bathroom_leak" },
             "simulation": {
               "enabled": true,
-              "open_probability": 0.05
+              "state_probability": 0.0
+            }
+          },
+          {
+            "id": "sensor.bathroom_humidity",
+            "type": "humidity_sensor",
+            "initial_state": { "humidity": 55.0 },
+            "entities": { "humidity": "sensor.bathroom_humidity" },
+            "simulation": {
+              "enabled": true,
+              "humidity": {
+                "min": 40.0,
+                "max": 70.0,
+                "max_change": 1.5
+              }
             }
           }
         ]

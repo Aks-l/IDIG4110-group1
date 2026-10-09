@@ -123,14 +123,19 @@ func (g *Gateway) ApplyCommand(command dto.Command, now time.Time) ([]Reading, e
 }
 
 // deviceFor resolves an external entity id to its device. Commands address
-// entities (docs/architecture/gateway-api.md) and readings identify them
-// as "{device_id}.{property}", so both "light_1" and "light_1.on" resolve
-// to the light_1 device.
+// entities (docs/architecture/gateway-api.md), so a device id ("light_1"),
+// its composed form ("light_1.on") and a configured entity id from the
+// house.json entities map all resolve to the device.
 func (g *Gateway) deviceFor(externalEntityID string) (Device, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	if device, ok := g.devices[externalEntityID]; ok {
 		return device, true
+	}
+	for _, device := range g.devices {
+		if device.Addresses(externalEntityID) {
+			return device, true
+		}
 	}
 	deviceID, _, found := strings.Cut(externalEntityID, ".")
 	if !found {

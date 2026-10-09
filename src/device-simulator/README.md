@@ -21,14 +21,27 @@ how its readings change without requiring code changes.
 Each device advertises capabilities such as `turn_on`, `set_temperature`, or
 `read_motion`. Commands unsupported by a device are rejected. Readings are
 published as `sensors/{device_id}/{property}/state`, and the state event's
-entity ID is `{device_id}.{property}`.
+entity ID is `{device_id}.{property}`, unless house.json maps the property
+with `entities`:
+
+```json
+"entities": { "temperature": "temperature.bedroom" }
+```
+
+The bundled house.json mirrors the demo home that twin-core seeds
+(`src/twin-core/migrations/20261008200000_seed_demo_home`): its readings
+update the seeded entities instead of auto-provisioning placeholders, and
+the rules-engine safety rules can act on its smoke and leak sensors. Lights,
+fans, sirens, locks and valves report Home Assistant style states
+(`on`/`off`, `locked`/`unlocked`, `open`/`closed`) and accept
+`turn_on`/`turn_off`, `lock`/`unlock` and `open`/`close` commands.
 
 The simulator listens for commands on
 `twin/{gateway_id}/commands`, so the existing rules-engine command path can
-control configured devices. A command may address the device
-(`light_1`) or one of its entities (`light_1.on`); the entity form is what
-readings publish and the command path uses. The gateway keeps device state
-in memory and
+control configured devices. A command may address the device (`light_1`),
+one of its entities (`light_1.on`), or the external entity id an
+`entities` mapping publishes (`temperature.bedroom`). The gateway keeps
+device state in memory and
 persists readings through the `Storage` interface. A database-backed storage
 implementation can replace `MemoryStorage` without changing device logic.
 
@@ -70,15 +83,18 @@ Useful settings are:
 
 - `temperature.min`, `temperature.max`, `temperature.max_change`
 - `humidity.min`, `humidity.max`, `humidity.max_change`
-- `motion_probability` and `open_probability`, from `0.0` to `1.0`
+- `motion_probability`, `open_probability` and `state_probability`, from
+  `0.0` to `1.0`
 - `power.min` and `power.max` for smart plugs
 - `energy_per_tick` for energy sensors
 - `temperature_step` for air conditioners, ovens, and thermostats
 
-Set a probability to `1.0` to make a motion or door sensor always active, or
-`0.0` to keep it inactive. This is useful for testing rule effects. Set
-`enabled` to `false` to stop changing the device automatically; its current
-state is still published once and the device remains available for commands.
+Set a probability to `1.0` to make a motion, door or binary sensor always
+active, or `0.0` to keep it inactive. This is useful for testing rule
+effects: `state_probability` drives `binary_sensor` devices such as the
+smoke and leak sensors the safety rules watch. Set `enabled` to `false` to
+stop changing the device automatically; its current state is still published
+once and the device remains available for commands.
 
 For a new type, add its capabilities and simulation/command behavior in
 `internal/simulator/device.go`, then add a configuration entry. The gateway

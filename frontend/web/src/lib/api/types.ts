@@ -127,6 +127,22 @@ export type RoomLayout = {
   size: [number, number, number];
 };
 
+// A passage between two rooms (doorway, archway, open plan) in the 3D
+// scene: a floor-level box bridging the two rooms' shared wall.
+export type RoomConnection = {
+  fromRoomId: string;
+  toRoomId: string;
+  label?: string;
+  position: [number, number, number];
+  size: [number, number, number];
+};
+
+// GET /3d/rooms: the room boxes plus the passages between them.
+export type ThreeDRoomsData = {
+  rooms: RoomLayout[];
+  connections: RoomConnection[];
+};
+
 export type Activity = {
   id: string;
   timestamp: string;

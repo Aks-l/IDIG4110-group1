@@ -202,7 +202,8 @@ PLACEHOLDER_TWIN_PATHS=/rooms,/devices,/3d/rooms,/overview
 ```
 
 Everything reads one dashboard view, `GET /api/v1/homes/{home_id}/state`:
-areas and devices with their entities and current state. The home is
+areas and devices with their entities and current state; `/3d/rooms` also
+composes the home's relations for the passages between rooms. The home is
 `PLACEHOLDER_TWIN_HOME_ID` when set, otherwise the first home from
 `GET /api/v1/homes` — in practice the seeded demo home
 `00000000-0000-0000-0000-000000000001` (`20261008200000_seed_demo_home`),
@@ -217,7 +218,7 @@ the rules hybrid are enabled by default: `npm run dev` reads them from
 | --- | --- | --- |
 | `GET /rooms`, `GET /rooms/:id` | `GET /api/v1/homes/{home_id}/state` | areas → `RoomData` |
 | `GET /devices`, `GET /devices/:id` | `GET /api/v1/homes/{home_id}/state` | devices + entities → `Device` |
-| `GET /3d/rooms` | `GET /api/v1/homes/{home_id}/state` | area geometry → `RoomLayout` |
+| `GET /3d/rooms` | `GET /api/v1/homes/{home_id}/state`, `GET /api/v1/homes/{home_id}/relations` | area geometry → `RoomLayout`; area `connects_to` edges → `RoomConnection` |
 | `GET /overview` | `GET /api/v1/homes/{home_id}/state` | home aggregate → `OverviewData` |
 
 The mapping lives in `src/lib/api/twin.ts` and is honest about what
@@ -247,7 +248,13 @@ twin-core lacks:
   `state.updated_at` of the device's entities.
 - `GET /3d/rooms` reads `position` and `size` triples from the area's
   free-form `geometry` when present, and otherwise falls back to a
-  deterministic grid.
+  deterministic grid. Geometry `y` is the floor level, so the mapping lifts
+  the box center by half the height — rooms sit on the ground plane like
+  the mock slabs. Passages come from the area-to-area `connects_to`
+  relations: each edge becomes a floor-level box bridging the gap along
+  the two rooms' shared wall, with the opening sized by its label —
+  `doorway` 1.2, `archway` 2.2, anything else (open plan, unlabeled) the
+  full shared span.
 
 twin-core is part of the stack: the development compose publishes it on
 host port `8084` (the api-gateway moved to host port `8080` and also routes
@@ -359,7 +366,7 @@ Implemented in `3d-model.ts`:
 
 | Method | Path | Response |
 | --- | --- | --- |
-| `GET` | `/3d/rooms` | `RoomLayout[]` |
+| `GET` | `/3d/rooms` | `{ rooms: RoomLayout[]; connections: RoomConnection[] }` |
 
 ## Response Types
 
@@ -433,7 +440,7 @@ The current adapters are:
 | `events.data.ts` | Events |
 | `automations.data.ts` | Automations |
 | `devices.data.ts` | Devices and device mutations |
-| `three-d.data.ts` | 3D room layout |
+| `three-d.data.ts` | 3D room layout and connections |
 | `overview.data.ts` | Overview dashboard data |
 | `energy.data.ts` | Energy range data |
 
