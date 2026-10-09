@@ -1,15 +1,15 @@
 package server
 
-import "IDIG4110/auth-service/internal/user"
+import "IDIG4110/auth-service/internal/auth"
 
 type Handlers struct {
-	User *user.UserHandler
+	Auth *auth.AuthHandler
 }
 
 func NewHandlers(
-	userHandler *user.UserHandler,
+	authHandler *auth.AuthHandler,
 ) *Handlers {
 	return &Handlers{
-		User: userHandler,
+		Auth: authHandler,
 	}
 }

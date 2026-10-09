@@ -1,9 +1,10 @@
 package server
 
 import (
+	"IDIG4110/auth-service/internal/auth"
 	"IDIG4110/auth-service/internal/config"
 	"IDIG4110/auth-service/internal/db"
-	"IDIG4110/auth-service/internal/user"
+
 	"context"
 	"errors"
 	"fmt"
@@ -26,12 +27,13 @@ func Run() error {
 		return err
 	}
 
-	userRepo := user.NewUserRepository(db.Pool)
-	userService := user.NewUserService(userRepo)
-	userHandler := user.NewUserHandler(userService)
+	signer := auth.NewJWTSigner(cfg.PrivateKey.Key)
+	authRepo := auth.NewAuthRepository(db.Pool)
+	authService := auth.NewAuthService(authRepo, signer)
+	authHandler := auth.NewAuthHandler(authService)
 
-	handlers := NewHandlers(userHandler)
-	
+	handlers := NewHandlers(authHandler)
+
 	router := NewRouter(handlers)
 
 	httpServer := http.Server{

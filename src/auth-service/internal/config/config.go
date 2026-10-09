@@ -2,13 +2,19 @@ package config
 
 import (
 	"IDIG4110/shared/env"
+	"encoding/base64"
 	"fmt"
+	"go/printer"
+	"log"
+
+	"golang.org/x/crypto/ed25519"
 )
 
 type Config struct {
-	Server    ServerConfig
-	Database  DatabaseConfig
-	Migration Migration
+	Server     ServerConfig
+	Database   DatabaseConfig
+	Migration  Migration
+	PrivateKey PrivateKey
 }
 
 type ServerConfig struct {
@@ -25,6 +31,10 @@ type DatabaseConfig struct {
 
 type Migration struct {
 	Directory string
+}
+
+type PrivateKey struct {
+	Key ed25519.PrivateKey
 }
 
 func (db *DatabaseConfig) init() {
@@ -44,8 +54,6 @@ func (db *DatabaseConfig) init() {
 		name,
 		ssl,
 	)
-
-	fmt.Printf(db.URL)
 }
 
 func (s *ServerConfig) init() {
@@ -60,8 +68,32 @@ func (m *Migration) init() {
 	m.Directory = env.Get("MIGRATION", "migrations")
 }
 
+func (pk *PrivateKey) init() error {
+	encoded := env.Get("AUTH_JWT_PRIVATE_KEY", "")
+
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return fmt.Errorf("Decode jwt private key: %w", err)
+	}
+
+	if len(raw) != ed25519.PrivateKeySize {
+		return fmt.Errorf(
+			"Invalid ed25519 private key length: got %d, want %d",
+			len(raw),
+			ed25519.PrivateKeySize,
+		)
+	}
+
+	pk.Key = ed25519.PrivateKey(raw)
+
+	return nil
+}
+
 func (c *Config) Init() {
 	c.Server.init()
 	c.Database.init()
 	c.Migration.init()
+	if err := c.PrivateKey.init(); err != nil {
+		log.Fatal(err)
+	}
 }
