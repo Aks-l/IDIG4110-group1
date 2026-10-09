@@ -4,7 +4,6 @@ import (
 	"IDIG4110/shared/env"
 	"encoding/base64"
 	"fmt"
-	"go/printer"
 	"log"
 
 	"golang.org/x/crypto/ed25519"
