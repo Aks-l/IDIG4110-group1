@@ -2,6 +2,7 @@ package broker
 
 import (
 	"IDIG4110/device-simulator/internal/config"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -47,15 +48,22 @@ func Init(cfg config.MqttConfig) (*Broker, error) {
 	}, nil
 }
 
-func (b *Broker) Publish(topic string, qos byte, payload []byte) {
+func (b *Broker) Publish(topic string, qos byte, payload []byte) error {
 	token := b.client.Publish(topic, qos, false, payload)
 	if !token.WaitTimeout(publishTimeout) {
-		slog.Error("Publish timed out", "topic", topic)
-		return
+		return fmt.Errorf("publishing to %s timed out", topic)
 	}
 	if err := token.Error(); err != nil {
-		slog.Error("Publish failed", "topic", topic, "error", err)
+		return err
 	}
+	slog.Info("published MQTT message", "topic", topic, "qos", qos)
+	return nil
+}
+
+func (b *Broker) Subscribe(topic string, handler mqtt.MessageHandler) error {
+	token := b.client.Subscribe(topic, 1, handler)
+	token.Wait()
+	return token.Error()
 }
 
 func (b *Broker) Close() {

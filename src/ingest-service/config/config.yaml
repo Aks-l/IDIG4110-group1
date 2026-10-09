@@ -1,8 +1,8 @@
 server:
   port: 8080
   readTimeout: 10
-  writeTimout: 10
-  idleTimout: 30
+  writeTimeout: 10
+  idleTimeout: 30
   maxHeaderBytes: 1048576
 
 database:
@@ -24,7 +24,7 @@ mqtt:
   cleanSession: false
   workerCount: 10
   workerBufferSize: 1000
-  topic: "sensors/+/state"
+  topic: "sensors/#"
 
 migration:
   directory: "migrations"

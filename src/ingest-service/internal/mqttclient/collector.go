@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
 
 	"IDIG4110/ingest-service/internal/domain"
 	"IDIG4110/shared/dto"
@@ -14,6 +15,7 @@ import (
 type Collector struct {
 	workers []chan dto.RawMessage
 	svc     domain.SensorIngestSvc
+	wg      sync.WaitGroup
 }
 
 func NewCollector(workerCount, bufferSize int, svc domain.SensorIngestSvc) *Collector {
@@ -33,7 +35,11 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 	var raw dto.RawMessage
 
 	if err := json.Unmarshal(msg.Payload(), &raw); err != nil {
-		slog.Error("MQTT Handler", "error", err, "topic", msg.Topic())
+		slog.Error(
+			"failed to decode MQTT sensor event",
+			"topic", msg.Topic(),
+			"error", err,
+		)
 		return
 	}
 
@@ -48,26 +54,38 @@ func (c *Collector) MQTTHandler(client mqtt.Client, msg mqtt.Message) {
 	select {
 	case c.workers[workerIndex] <- raw:
 	default:
-		slog.Warn("MQTT Collection is full")
+		slog.Warn(
+			"MQTT Collection is full, dropping event",
+			"topic", raw.Topic,
+			"worker", workerIndex)
 	}
 }
 
 func (c *Collector) StartWorkers() {
-	for i, ch := range c.workers {
-		go func(entityID int, queue chan dto.RawMessage) {
+	for _, ch := range c.workers {
+
+		c.wg.Add(1)
+
+		go func(queue chan dto.RawMessage) {
+			defer c.wg.Done()
+
 			for raw := range queue {
 				if err := c.svc.Create(context.Background(), raw); err != nil {
-					slog.Error("Failed to create sensor object", "error", err)
+					slog.Error(
+						"Failed to create sensor object",
+						"topic", raw.Topic,
+						"error", err)
 				}
 			}
-		}(i, ch)
+		}(ch)
 	}
 }
 
 func (c *Collector) Close() {
-	for i := range c.workers {
-		close(c.workers[i])
+	for _, worker := range c.workers {
+		close(worker)
 	}
+	c.wg.Wait()
 }
 
 func hash(s string) int {
