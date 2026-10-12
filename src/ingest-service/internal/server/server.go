@@ -16,8 +16,10 @@ import (
 	"IDIG4110/ingest-service/internal/config"
 	"IDIG4110/ingest-service/internal/db"
 	"IDIG4110/ingest-service/internal/domain"
+
 	"IDIG4110/shared/kafka"
 	"IDIG4110/shared/migrate"
+
 	"IDIG4110/ingest-service/internal/mqttclient"
 	"IDIG4110/ingest-service/internal/repository"
 	"IDIG4110/ingest-service/internal/service"
@@ -38,31 +40,39 @@ func Run() error {
 	if err != nil {
 		return err
 	}
-	m.Migrate.Up()
+	if err := m.Up(); err != nil {
+		return fmt.Errorf("migration running: %w", err)
+	}
 
 	if err := m.CheckMigrationStatus(); err != nil {
-		return err
+		return fmt.Errorf("migration status check failed: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Readings continue on to the event bus when brokers are configured;
+	// with none, ingest only stores them (docs/decisions/0001-kafka-event-bus.md).
 	var publisher domain.ReadingPublisher
-	var producer *kafka.Producer
 	brokers := kafka.ParseBrokers(cfg.Kafka.Brokers)
 	if len(brokers) > 0 {
-		producer, err = kafka.NewProducer(brokers)
+		producer, err := kafka.NewProducer(brokers)
 		if err != nil {
 			return err
 		}
 		defer producer.Close()
 		publisher = readingPublisher{producer}
+		slog.Info("publishing readings", "topic", kafka.TopicReadings, "brokers", cfg.Kafka.Brokers)
 	} else {
 		slog.Warn("No Kafka brokers configured: readings are stored but not published")
 	}
 
 	sensorIngestRepo := repository.NewSensorIngestRepoImpl(db)
-	sensorIngestSvc := service.NewImplSensorIngestSvc(sensorIngestRepo, publisher, cfg.Kafka.GatewayID)
+	sensorIngestSvc := service.NewImplSensorIngestSvc(
+		sensorIngestRepo,
+		publisher,
+		"",
+	)
 
 	coll := mqttclient.NewCollector(
 		cfg.Mqtt.WorkerCount,
@@ -84,6 +94,8 @@ func Run() error {
 		return err
 	}
 
+	// Device commands travel the other way: from the event bus back to the
+	// gateway over MQTT (docs/architecture/gateway-api.md).
 	if len(brokers) > 0 {
 		consumer, err := kafka.NewConsumer(brokers, cfg.Kafka.CommandsGroup, kafka.TopicCommands)
 		if err != nil {
@@ -95,6 +107,7 @@ func Run() error {
 				slog.Error("Command forwarding stopped", "error", err)
 			}
 		}()
+		slog.Info("consuming device commands", "topic", kafka.TopicCommands, "group", cfg.Kafka.CommandsGroup)
 	}
 
 	router := NewRouter(sensorIngestSvc)
@@ -103,7 +116,7 @@ func Run() error {
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),
 		Handler:        router,
 		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
-		WriteTimeout:   time.Duration(cfg.Server.WriteTimout) * time.Second,
+		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		IdleTimeout:    time.Duration(cfg.Server.IdleTimeout) * time.Second,
 		MaxHeaderBytes: cfg.Server.MaxHeaderBytes,
 	}
@@ -120,13 +133,13 @@ func Run() error {
 
 	select {
 	case err := <-serverError:
-		if err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		if errors.Is(err, http.ErrServerClosed) {
-			return err
+		if err != nil {
+			return fmt.Errorf("listen %w", err)
 		}
-		return fmt.Errorf("listen %w", err)
+		return nil
 	case <-shutdown:
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
