@@ -12,5 +12,6 @@ func NewRouter(handlers *Handlers) http.Handler {
 
 	mux.HandleFunc(http.MethodPost+AuthPath+"/register", handlers.Auth.Register)
 	mux.HandleFunc(http.MethodPost+AuthPath+"/login", handlers.Auth.Login)
+	mux.HandleFunc(http.MethodPost+AuthPath+"/refresh", handlers.Auth.Refresh)
 	return mux
 }

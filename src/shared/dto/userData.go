@@ -11,3 +11,7 @@ type TokenResponseDTO struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
 }
+
+type RefreshTokenDTO struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}

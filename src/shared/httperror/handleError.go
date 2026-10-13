@@ -37,12 +37,14 @@ func HandleAppError(w http.ResponseWriter, err error) {
 		switch appErr.Code {
 		case apperror.CodeEmailAlreadyUsed:
 			HandleError(w, http.StatusConflict, err, appErr.Message)
+			return
 		case apperror.CodeNoContent:
 			HandleError(w, http.StatusUnprocessableEntity, err, appErr.Message)
+			return
 		case apperror.CodeInvalidInput:
 			HandleError(w, http.StatusBadRequest, err, appErr.Message)
+			return
 		}
-		return
 	}
 	HandleError(w, http.StatusInternalServerError, err, ErrInternalServerError)
 }

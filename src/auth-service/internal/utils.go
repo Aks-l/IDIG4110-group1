@@ -1,6 +1,8 @@
 package internal
 
-import "crypto/rand"
+import (
+	"crypto/rand"
+)
 
 func GenerateSalt() ([]byte, error) {
 	salt := make([]byte, 16)
