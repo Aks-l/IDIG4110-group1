@@ -3,6 +3,9 @@
 
 BEGIN;
 
--- Add your rollback SQL here
+DROP TABLE IF EXISTS auth.sessions;
+
+DROP INDEX IF EXISTS idx_session_user_id;
+DROP INDEX IF EXISTS idx_session_expires_at;
 
 COMMIT;

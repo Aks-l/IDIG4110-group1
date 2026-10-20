@@ -18,4 +18,10 @@ CREATE TABLE auth.sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX idx_session_user_id
+ON auth.sessions (user_id);
+
+CREATE INDEX idx_session_expires_at
+ON auth.sessions (expires_at);
+
 COMMIT;

@@ -25,4 +25,7 @@ CREATE TABLE IF NOT EXISTS auth.home_members (
     PRIMARY KEY (user_id, home_id)
 );
 
+CREATE INDEX idx_user_email
+ON auth.users(email);
+
 COMMIT;
