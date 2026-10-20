@@ -190,8 +190,21 @@ func (s *AuthService) RefreshToken(ctx context.Context, refresh dto.RefreshToken
 	}
 
 	accessToken, err := s.signer.CreateAccessToken(session.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	refreshToken, newRefreshHash, err := createRefreshToken()
-	if err := s.repo.ReplaceRefreshHash(ctx, newRefreshHash, session.RefreshTokenHash, session.UserID); err != nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.ReplaceRefreshHash(
+		ctx,
+		newRefreshHash,
+		session.RefreshTokenHash,
+		session.UserID,
+	); err != nil {
 		return nil, err
 	}
 

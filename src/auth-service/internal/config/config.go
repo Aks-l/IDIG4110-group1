@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -40,21 +42,24 @@ type PrivateKey struct {
 
 func (db *DatabaseConfig) init() {
 	user := env.Get("AUTH_DB_USER", "auth")
-	port := env.GetInt("AUTH_DB_PORT", 5432)
+	port := env.Get("AUTH_DB_PORT", "5432")
 	host := env.Get("AUTH_DB_HOST", "localhost")
 	pwd := env.Get("AUTH_DB_PASSWORD", "123")
 	ssl := env.Get("AUTH_DB_SSL", "disable")
 	name := env.Get("AUTH_DB_NAME", "auth_db")
 
-	db.URL = fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		user,
-		pwd,
-		host,
-		port,
-		name,
-		ssl,
-	)
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(user, pwd),
+		Host:   net.JoinHostPort(host, port),
+		Path:   "/" + name,
+	}
+
+	q := u.Query()
+	q.Set("sslmode", ssl)
+	u.RawQuery = q.Encode()
+
+	db.URL = u.String()
 }
 
 func (s *ServerConfig) init() {
@@ -77,6 +82,14 @@ func (pk *PrivateKey) init() error {
 		return fmt.Errorf("Decode jwt private key: %w", err)
 	}
 
+	if len(raw) != ed25519.PrivateKeySize {
+		return fmt.Errorf(
+			"Invalid ED25519 private key length: got %d bytes, want %d",
+			len(raw),
+			ed25519.PrivateKeySize,
+		)
+	}
+
 	seed := raw[:ed25519.SeedSize]
 	derived := ed25519.NewKeyFromSeed(seed)
 
@@ -96,4 +109,9 @@ func (c *Config) Init() {
 	if err := c.PrivateKey.init(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (c *Config) InitMigration() {
+	c.Database.init()
+	c.Migration.init()
 }

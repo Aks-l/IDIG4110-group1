@@ -57,9 +57,6 @@ func Run() error {
 
 	select {
 	case err := <-serverError:
-		if err != nil {
-			return nil
-		}
 		if errors.Is(err, http.ErrServerClosed) {
 			return err
 		}

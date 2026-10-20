@@ -26,7 +26,7 @@ func main() {
 	command := args[0]
 
 	cfg := config.Config{}
-	cfg.Init()
+	cfg.InitMigration()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
