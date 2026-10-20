@@ -4,7 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
+
+var validate = validator.New()
+
+func Validate[T any](data T) error {
+	return validate.Struct(data)
+}
 
 func Encode[T any](w http.ResponseWriter, code int, v T) error {
 	w.Header().Set("Content-Type", "application/json")

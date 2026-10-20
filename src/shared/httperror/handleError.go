@@ -1,7 +1,9 @@
 package httperror
 
 import (
+	"IDIG4110/shared/apperror"
 	jsonutils "IDIG4110/shared/json-utils"
+	"errors"
 	"log/slog"
 	"net/http"
 )
@@ -26,4 +28,23 @@ func HandleError(w http.ResponseWriter, code int, err error, msg string) {
 	if errEncode := jsonutils.Encode(w, code, resp); errEncode != nil {
 		slog.Error("failed to write error response", "error", errEncode)
 	}
+}
+
+func HandleAppError(w http.ResponseWriter, err error) {
+	var appErr *apperror.Error
+
+	if errors.As(err, &appErr) {
+		switch appErr.Code {
+		case apperror.CodeEmailAlreadyUsed:
+			HandleError(w, http.StatusConflict, err, appErr.Message)
+			return
+		case apperror.CodeNoContent:
+			HandleError(w, http.StatusUnprocessableEntity, err, appErr.Message)
+			return
+		case apperror.CodeInvalidInput:
+			HandleError(w, http.StatusBadRequest, err, appErr.Message)
+			return
+		}
+	}
+	HandleError(w, http.StatusInternalServerError, err, ErrInternalServerError)
 }
