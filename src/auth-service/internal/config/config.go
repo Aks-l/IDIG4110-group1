@@ -2,7 +2,9 @@ package config
 
 import (
 	"IDIG4110/shared/env"
+	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 
@@ -75,12 +77,11 @@ func (pk *PrivateKey) init() error {
 		return fmt.Errorf("Decode jwt private key: %w", err)
 	}
 
-	if len(raw) != ed25519.PrivateKeySize {
-		return fmt.Errorf(
-			"Invalid ed25519 private key length: got %d, want %d",
-			len(raw),
-			ed25519.PrivateKeySize,
-		)
+	seed := raw[:ed25519.SeedSize]
+	derived := ed25519.NewKeyFromSeed(seed)
+
+	if !bytes.Equal(raw, derived) {
+		return errors.New("invalid Ed25519 private key")
 	}
 
 	pk.Key = ed25519.PrivateKey(raw)
