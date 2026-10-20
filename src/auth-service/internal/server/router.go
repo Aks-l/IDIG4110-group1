@@ -10,9 +10,9 @@ func NewRouter(handlers *Handlers) http.Handler {
 		w.Write([]byte("ok"))
 	})
 
-	mux.HandleFunc(http.MethodPost+AuthPath+"/register", handlers.Auth.Register)
-	mux.HandleFunc(http.MethodPost+AuthPath+"/login", handlers.Auth.Login)
-	mux.HandleFunc(http.MethodPost+AuthPath+"/refresh", handlers.Auth.Refresh)
-	mux.HandleFunc(http.MethodPost+AuthPath+"/logout", handlers.Auth.Logout)
+	mux.HandleFunc(AuthRegisterPath, handlers.Auth.Register)
+	mux.HandleFunc(AuthLoginPath, handlers.Auth.Login)
+	mux.HandleFunc(AuthRefreshPath, handlers.Auth.Refresh)
+	mux.HandleFunc(AuthLogoutPath, handlers.Auth.Logout)
 	return mux
 }

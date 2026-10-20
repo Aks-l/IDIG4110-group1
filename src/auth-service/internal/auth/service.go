@@ -106,12 +106,12 @@ func verifyPassword(password, encoded string) (bool, error) {
 
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
-
+		return false, apperror.InternalServerError()
 	}
 
 	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
-
+		return false, apperror.InternalServerError()
 	}
 
 	actualHash := argon2.IDKey(
