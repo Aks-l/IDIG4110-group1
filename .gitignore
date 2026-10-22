@@ -43,6 +43,11 @@ go.work.sum
 
 *.test
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
 .air/
 .air.toml.local
 tmp/
