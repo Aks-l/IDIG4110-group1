@@ -4,6 +4,7 @@ import (
 	"IDIG4110/shared/apperror"
 	"IDIG4110/shared/headers"
 	"IDIG4110/shared/httperror"
+	"IDIG4110/shared/middleware"
 	"context"
 	"crypto/ed25519"
 	"fmt"
@@ -22,7 +23,7 @@ func UserIDFromContext(ctx context.Context) (string, bool) {
 	return userID, ok
 }
 
-func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler {
+func AuthMiddleware(publicKey ed25519.PublicKey) middleware.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
