@@ -32,12 +32,12 @@ func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler
 				return
 			}
 
-			if !strings.HasPrefix(authHeader, prefix) {
+			if len(authHeader) < len(prefix) || !strings.EqualFold(authHeader[:len(prefix)], prefix) {
 				httperror.HandleAppError(w, apperror.UnathorizedRequestError("Expected the prefix: "+prefix))
 				return
 			}
 
-			rawToken := strings.TrimPrefix(authHeader, prefix)
+			rawToken := authHeader[len(prefix):]
 
 			token, err := jwt.Parse(
 				rawToken,
@@ -51,6 +51,7 @@ func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler
 				jwt.WithIssuer("auth-service"),
 				jwt.WithAudience("smarthome"),
 				jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
+				jwt.WithExpirationRequired(),
 			)
 			if err != nil || !token.Valid {
 				httperror.HandleAppError(w, apperror.UnathorizedRequestError("malformed or expired token"))
@@ -65,7 +66,7 @@ func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler
 
 			userID, err := claims.GetSubject()
 			if err != nil || userID == "" {
-				apperror.UnathorizedRequestError()
+				httperror.HandleAppError(w, apperror.UnathorizedRequestError())
 				return
 			}
 
@@ -75,7 +76,7 @@ func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler
 				userID,
 			)
 
-			r.Header.Add(headers.UserID, userID)
+			r.Header.Set(headers.UserID, userID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
