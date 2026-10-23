@@ -7,6 +7,7 @@ import (
 
 	"IDIG4110/api-gateway/internal/config"
 	"IDIG4110/api-gateway/internal/handlers"
+	auth "IDIG4110/api-gateway/internal/middleware"
 	"IDIG4110/api-gateway/internal/proxy"
 	"IDIG4110/shared/middleware"
 )

@@ -107,6 +107,8 @@ services:
       dockerfile: infra/dev/api-gateway.Dockerfile
     ports:
       - "8084:8080"
+    env_file:
+      - "./src/api-gateway/.env"
     volumes:
       - ./src/api-gateway:/app
       - ./src/shared:/shared
@@ -187,7 +189,7 @@ services:
       context: .
       dockerfile: infra/dev/auth-service.Dockerfile
     ports:
-      - "8083:8080"
+      - "8085:8080"
     env_file:
       - "./src/auth-service/.env"
     volumes:
