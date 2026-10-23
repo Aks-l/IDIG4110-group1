@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"IDIG4110/shared/apperror"
+	"IDIG4110/shared/headers"
 	"IDIG4110/shared/httperror"
 	"context"
 	"crypto/ed25519"
@@ -73,6 +74,8 @@ func AuthMiddleware(publicKey ed25519.PublicKey) func(http.Handler) http.Handler
 				userIDContextKey{},
 				userID,
 			)
+
+			r.Header.Add(headers.UserID, userID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
