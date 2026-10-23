@@ -44,6 +44,9 @@ func HandleAppError(w http.ResponseWriter, err error) {
 		case apperror.CodeInvalidInput:
 			HandleError(w, http.StatusBadRequest, err, appErr.Message)
 			return
+		case apperror.CodeUnauthorized:
+			HandleError(w, http.StatusUnauthorized, err, appErr.Message)
+			return
 		}
 	}
 	HandleError(w, http.StatusInternalServerError, err, ErrInternalServerError)

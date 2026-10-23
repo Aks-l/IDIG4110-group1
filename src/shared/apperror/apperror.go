@@ -30,3 +30,13 @@ func InternalServerError() *Error {
 		"internal server error",
 	)
 }
+
+func UnathorizedRequestError(message ...string) *Error {
+	errMsg := "Unauthorized request"
+
+	if len(message) > 0 {
+		errMsg = message[0]
+	}
+
+	return CreateNewError(CodeUnauthorized, errMsg)
+}

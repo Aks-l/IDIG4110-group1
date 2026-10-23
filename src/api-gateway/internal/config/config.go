@@ -1,8 +1,12 @@
 package config
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"os"
+
+	"IDIG4110/shared/env"
 
 	"go.yaml.in/yaml/v4"
 )
@@ -12,6 +16,35 @@ type Config struct {
 	Proxy     ProxyConfig      `yaml:"proxy"`
 	Health    HealthConfig     `yaml:"health"`
 	Upstreams []UpstreamConfig `yaml:"upstreams"`
+	Auth      AuthConfig
+}
+
+type AuthConfig struct {
+	PublicKey ed25519.PublicKey
+}
+
+func (ac *AuthConfig) Load() error {
+	encoded, err := env.Required("AUTH_JWT_PUBLIC_KEY")
+	if err != nil {
+		return err
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return fmt.Errorf("Deoced jwlt public key: %w", err)
+	}
+
+	if len(raw) != ed25519.PublicKeySize {
+		return fmt.Errorf(
+			"Invalid ED25519 public key length: got %d bytes, want %d",
+			len(raw),
+			ed25519.PublicKeySize,
+		)
+	}
+
+	ac.PublicKey = ed25519.PublicKey(raw)
+
+	return nil
 }
 
 type UpstreamConfig struct {
@@ -55,6 +88,10 @@ func Load(configPath string) (*Config, error) {
 	}
 	if cfg.Server.ShutdownTimeout <= 0 {
 		cfg.Server.ShutdownTimeout = 10
+	}
+
+	if err := cfg.Auth.Load(); err != nil {
+		return nil, err
 	}
 
 	return &cfg, nil
